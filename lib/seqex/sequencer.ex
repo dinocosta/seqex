@@ -48,7 +48,8 @@ defmodule Seqex.Sequencer do
   @impl true
   def handle_info(:play, %{playing?: true, sequence: sequence, conn: conn, position: position} = state) do
     # TODO: Improve this to use that sweet sweet math I just seem to be able to remember right now :melt:
-    current_notes = List.flatten([Enum.at(sequence, position)])
+    # We're using the `|| []` bit to make sure we also support steps with empty notes (`nil`).
+    current_notes = List.flatten([Enum.at(sequence, position) || []])
 
     next_position =
       case position == length(sequence) - 1 do
@@ -117,9 +118,10 @@ defmodule Seqex.Sequencer do
     # We're inserting the note or list of notes into a list and then calling `List.flatten/1` to
     # make sure this function always return a list of notes, even if the sequence only has single
     # notes.
+    # Also, the `notes || []` notation is used in order to support steps with empty notes (`nil`).
     sequence
     |> Enum.at(previous_position)
-    |> then(fn notes -> List.flatten([notes]) end)
+    |> then(fn notes -> List.flatten([notes || []]) end)
   end
 
   # --------------------------------------------------------------------------------------------------------------------
