@@ -96,10 +96,33 @@ defmodule Seqex.Arpeggiator do
     |> then(fn _ -> {:noreply, Map.put(state, :playing?, false)} end)
   end
 
-  def handle_cast({:set_bpm, bpm}, state), do: {:noreply, Map.put(state, :bpm, bpm)}
-
   # Toggles the `:playing?` boolean in the state, effectively stopping or starting the arpeggiator.
   def handle_cast(:toggle_playing, state), do: {:noreply, Map.put(state, :playing?, !state.playing?)}
+
+  def handle_cast({:update_bpm, bpm}, state), do: {:noreply, Map.put(state, :bpm, bpm)}
+
+  # Updating the `:notes` in the arpeggiator's state also means both: 
+  #
+  # 1. Updating the `:position` to 0, in order to make sure that, if the new
+  # list of notes is smaller than the previous one, we don't get an exception
+  # by trying to access an element out of bounds.
+  # 2. Stopping the last played note as we're resetting the position, so it's
+  # likely that the next time the `:play` message runs it won't stop the
+  # previously played note, as the list of notes might have changed as well as
+  # the position has changed.
+  def handle_cast({:update_notes, notes}, state) do 
+    previous_note =
+      if state.position == 0,
+        do: Enum.at(state.notes, length(state.notes) - 1),
+        else: Enum.at(state.notes, state.position - 1)
+
+    MIDI.note_off(state.conn, previous_note)
+
+    state
+    |> Map.put(:notes, notes)
+    |> Map.put(:position, 0)
+    |> then(fn updated_state -> {:noreply, updated_state} end)
+  end
 
   # --------------------------------------------------------------------------------------------------------------------
   # Client Definition
@@ -109,10 +132,10 @@ defmodule Seqex.Arpeggiator do
   Starts playing the arpeggiator.
   """
   @spec play(pid()) :: :ok
-  def play(pid) do 
-    if GenServer.call(pid, :is_playing?) == false do
-      GenServer.cast(pid, :toggle_playing)
-      Process.send(pid, :play, [])
+  def play(arpeggiator) do 
+    if GenServer.call(arpeggiator, :is_playing?) == false do
+      GenServer.cast(arpeggiator, :toggle_playing)
+      Process.send(arpeggiator, :play, [])
     end
   end
 
@@ -121,19 +144,29 @@ defmodule Seqex.Arpeggiator do
   The GenServer is not stopped, so you can still call `play/1` with the same PID.
   """
   @spec stop(pid()) :: :ok
-  def stop(pid) do 
-    GenServer.cast(pid, :toggle_playing)
-    GenServer.cast(pid, :stop)
+  def stop(arpeggiator) do 
+    GenServer.cast(arpeggiator, :toggle_playing)
+    GenServer.cast(arpeggiator, :stop)
   end
 
   @doc """
   Kills the arpeggiator by calling `GenServer.stop/1`.
   """
   @spec kill(pid()) :: :ok
-  def kill(pid) do
-    __MODULE__.stop(pid)
-    GenServer.stop(pid)
+  def kill(arpeggiator) do
+    __MODULE__.stop(arpeggiator)
+    GenServer.stop(arpeggiator)
   end
 
-  def update_bpm(pid, bpm), do: GenServer.cast(pid, {:set_bpm, bpm})
+  @doc """
+  Updates the beats per minutes of the `arpeggiator` to the ones in `bpm`.
+  """
+  @spec update_bpm(pid(), non_neg_integer()) :: :ok
+  def update_bpm(arpeggiator, bpm), do: GenServer.cast(arpeggiator, {:update_bpm, bpm})
+
+  @doc """
+  Updates the notes used by the `arpeggiator` to the ones in `notes`.
+  """
+  @spec update_notes(pid(), notes()) :: :ok
+  def update_notes(arpeggiator, notes), do: GenServer.cast(arpeggiator, {:update_notes, notes})
 end
