@@ -16,3 +16,22 @@ Ready to run in production? Please [check our deployment guides](https://hexdocs
   * Docs: https://hexdocs.pm/phoenix
   * Forum: https://elixirforum.com/c/phoenix-forum
   * Source: https://github.com/phoenixframework/phoenix
+
+## Listening To MIDI Messages
+
+[Midiex](https://github.com/haubie/midiex) allows MIDI messages to be processesd from input ports.
+You can use `Midiex.Listener` to do this, defining handler functions to process the messages:
+
+```elixir
+# 1. Define the input port you want to listen to.
+input_port = Enum.find(Midiex.ports(), fn port -> port.direction == :input end)
+
+# 2. Create a listener.
+{:ok, listener} = Midiex.Listener.start_link(input_port: input_port)
+
+# 3. Define a handler function.
+Midiex.Listener.add_handler(listener, fn message -> IO.inspect(message) end)
+```
+
+As far as I can tell the handler can be any function so you could use the notes from the MIDI
+message to control anything you want to.
