@@ -14,11 +14,15 @@ defmodule SeqexWeb.Router do
     plug :accepts, ["json"]
   end
 
-
   scope "/", SeqexWeb do
     pipe_through :browser
 
-    live "/", Live
+    get "/", PageController, :home
+    live "/live", Live
+
+    scope "/playgrounds", Playgrounds do
+      live "/notes-listener", NotesListener
+    end
   end
 
   # Other scopes may use custom stacks.
