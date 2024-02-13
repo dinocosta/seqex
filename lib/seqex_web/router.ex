@@ -14,11 +14,11 @@ defmodule SeqexWeb.Router do
     plug :accepts, ["json"]
   end
 
-
   scope "/", SeqexWeb do
     pipe_through :browser
 
     live "/", Live
+    live "/play-pause", LivePlayPause
   end
 
   # Other scopes may use custom stacks.

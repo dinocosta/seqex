@@ -46,7 +46,10 @@ defmodule Seqex.Sequencer do
   # Stops the previous note(s) in the sequence and plays the next one(s), scheduling another cast to the GenServer to
   # trigger the one(s) after.
   @impl true
-  def handle_info(:play, %{playing?: true, sequence: sequence, conn: conn, position: position} = state) do
+  def handle_info(
+        :play,
+        %{playing?: true, sequence: sequence, conn: conn, position: position} = state
+      ) do
     # TODO: Improve this to use that sweet sweet math I just seem to be able to remember right now :melt:
     # We're using the `|| []` bit to make sure we also support steps with empty notes (`nil`).
     current_notes = List.flatten([Enum.at(sequence, position) || []])
@@ -88,11 +91,12 @@ defmodule Seqex.Sequencer do
   end
 
   # Toggles the `:playing?` boolean in the state, effectively stopping or starting the sequencer.
-  def handle_cast(:toggle_playing, state), do: {:noreply, Map.put(state, :playing?, !state.playing?)}
+  def handle_cast(:toggle_playing, state),
+    do: {:noreply, Map.put(state, :playing?, !state.playing?)}
 
   def handle_cast({:update_bpm, bpm}, state), do: {:noreply, Map.put(state, :bpm, bpm)}
 
-  # Updating the `:sequence` in the sequencer's state also means both: 
+  # Updating the `:sequence` in the sequencer's state also means both:
   #
   # 1. Updating the `:position` to 0, in order to make sure that, if the new
   # sequence is smaller than the previous one, we don't get an exception by trying to access an
@@ -101,7 +105,7 @@ defmodule Seqex.Sequencer do
   # likely that the next time the `:play` message runs it won't stop the
   # previously played note, as the sequence of notes might have changed as well as
   # the position has changed.
-  def handle_cast({:update_sequence, sequence}, state) do 
+  def handle_cast({:update_sequence, sequence}, state) do
     MIDI.note_off(state.conn, previous_notes(state))
 
     state
@@ -132,7 +136,7 @@ defmodule Seqex.Sequencer do
   Starts playing the sequencer.
   """
   @spec play(pid()) :: :ok
-  def play(sequencer) do 
+  def play(sequencer) do
     if GenServer.call(sequencer, :is_playing?) == false do
       GenServer.cast(sequencer, :toggle_playing)
       Process.send(sequencer, :play, [])
@@ -140,11 +144,11 @@ defmodule Seqex.Sequencer do
   end
 
   @doc """
-  Stops the sequencer, turning off every note. 
+  Stops the sequencer, turning off every note.
   The GenServer is not stopped, so you can still call `play/1` with the same PID.
   """
   @spec stop(pid()) :: :ok
-  def stop(sequencer) do 
+  def stop(sequencer) do
     GenServer.cast(sequencer, :toggle_playing)
     GenServer.cast(sequencer, :stop)
   end
@@ -168,5 +172,12 @@ defmodule Seqex.Sequencer do
   Updates the sequence used by the `sequencer` to the ones in `sequence`.
   """
   @spec update_sequence(pid(), notes()) :: :ok
-  def update_sequence(sequencer, sequence), do: GenServer.cast(sequencer, {:update_sequence, sequence})
+  def update_sequence(sequencer, sequence),
+    do: GenServer.cast(sequencer, {:update_sequence, sequence})
+
+  @doc """
+  Returns information about whether the sequencer is playing or not.
+  """
+  @spec playing?(pid()) :: boolean()
+  def playing?(sequencer), do: GenServer.call(sequencer, :is_playing?)
 end
