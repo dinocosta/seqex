@@ -7,10 +7,8 @@ defmodule Seqex.Sequencer do
 
   Here's some example usage with `Midiex`.
 
-      iex> [output_port | _] = Midiex.ports(:output)
-      iex> connection = Midiex.open(output_port)
-      iex> sequence = [60, 64, 67, 71]
-      iex> {:ok, sequencer} = GenServer.start_link(#{__MODULE__}, %{sequence: sequence, conn: connection})
+      iex> [port | _] = Midiex.ports(:output)
+      iex> {:ok, sequencer} = #{__MODULE__}.start_link(port, sequence: [60, 64, 67, 71])
       iex> #{__MODULE__}.play(sequencer)
   """
 
@@ -19,6 +17,12 @@ defmodule Seqex.Sequencer do
   alias Seqex.MIDI
 
   @type notes :: [non_neg_integer()]
+
+  @typedoc """
+  * `sequence` - List of notes, or chords, to be played in the sequence.
+  * `bpm` - The sequencer's BPM.
+  """
+  @type option :: {:sequence, notes()} | {:bpm, non_neg_integer()}
 
   @typedoc """
   * `sequence` - List of notes, or chords, to be played in the sequence.
@@ -41,9 +45,14 @@ defmodule Seqex.Sequencer do
 
   @minute_in_milliseconds 60_000
 
-  # --------------------------------------------------------------------------------------------------------------------
+  @default_initial_state %{
+    sequence: [],
+    bpm: 120
+  }
+
+  # -------------------------------------------------------------------------------------------------------------------
   # Server Definition
-  # --------------------------------------------------------------------------------------------------------------------
+  # -------------------------------------------------------------------------------------------------------------------
 
   @impl true
   @spec init(state()) :: {:ok, state()}
@@ -129,9 +138,23 @@ defmodule Seqex.Sequencer do
     |> then(fn updated_state -> {:noreply, updated_state} end)
   end
 
-  # --------------------------------------------------------------------------------------------------------------------
+  # -------------------------------------------------------------------------------------------------------------------
   # Client Definition
-  # --------------------------------------------------------------------------------------------------------------------
+  # -------------------------------------------------------------------------------------------------------------------
+
+  @doc """
+  Starts a new GenServer instance for the sequencer.
+  You must provide the MIDI output port as the `output_port` argument.
+  """
+  @spec start_link(port :: %Midiex.MidiPort{}, options :: [option()]) :: {:ok, pid()}
+  def start_link(port, options \\ []) do
+    options
+    |> Enum.into(%{})
+    |> Map.take(Map.keys(@default_initial_state))
+    |> then(fn options -> Map.merge(@default_initial_state, options) end)
+    |> Map.put(:conn, Midiex.open(port))
+    |> then(fn options -> GenServer.start_link(__MODULE__, options) end)
+  end
 
   @doc """
   Starts playing the sequencer.
