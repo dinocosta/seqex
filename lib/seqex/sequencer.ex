@@ -16,13 +16,19 @@ defmodule Seqex.Sequencer do
 
   alias Seqex.MIDI
 
-  @type notes :: [non_neg_integer()]
+  @typedoc """
+  A note can either be repreesented as a single integer, meaning the MIDI note to be played, or a tuple, where the
+  first value is the note to be played and the second value is the velocity of the note.
+
+  By default, if only the note is provided, the velocity will be set to 100.
+  """
+  @type note :: non_neg_integer() | {note :: non_neg_integer(), velocity :: non_neg_integer()}
 
   @typedoc """
   * `sequence` - List of notes, or chords, to be played in the sequence.
   * `bpm` - The sequencer's BPM.
   """
-  @type option :: {:sequence, notes()} | {:bpm, non_neg_integer()}
+  @type option :: {:sequence, [note() | [note()]]} | {:bpm, non_neg_integer()}
 
   @typedoc """
   * `sequence` - List of notes, or chords, to be played in the sequence.
@@ -35,11 +41,11 @@ defmodule Seqex.Sequencer do
   * `position` - The current position in the sequence.
   """
   @type state :: %{
-          sequence: notes(),
+          sequence: [note() | [note()]],
           conn: %Midiex.OutConn{},
           bpm: non_neg_integer(),
           playing?: boolean(),
-          notes_playing: notes(),
+          notes_playing: [note() | [note()]],
           position: non_neg_integer()
         }
 
@@ -195,7 +201,7 @@ defmodule Seqex.Sequencer do
   @doc """
   Updates the sequence used by the `sequencer` to the ones in `sequence`.
   """
-  @spec update_sequence(pid(), notes()) :: :ok
+  @spec update_sequence(pid(), [note() | [note()]]) :: :ok
   def update_sequence(sequencer, sequence),
     do: GenServer.cast(sequencer, {:update_sequence, sequence})
 end
