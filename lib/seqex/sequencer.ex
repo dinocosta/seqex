@@ -20,7 +20,8 @@ defmodule Seqex.Sequencer do
   * `sequence` - List of notes, or chords, to be played in the sequence.
   * `bpm` - The sequencer's BPM.
   """
-  @type option :: {:sequence, [MIDI.note() | [MIDI.note()]]} | {:bpm, non_neg_integer()}
+  @type option ::
+          {:sequence, [MIDI.note() | [MIDI.note()]]} | {:bpm, non_neg_integer()} | {:connection, %Midiex.OutConn{}}
 
   @typedoc """
   * `sequence` - List of notes, or chords, to be played in the sequence.
@@ -144,13 +145,16 @@ defmodule Seqex.Sequencer do
   Starts a new GenServer instance for the sequencer.
   You must provide the MIDI output port as the `output_port` argument.
   """
-  @spec start_link(port :: %Midiex.MidiPort{}, options :: [option()]) :: {:ok, pid()}
-  def start_link(port, options \\ []) do
+  @spec start_link(port_or_conn :: %Midiex.MidiPort{} | %Midiex.OutConn{}, options :: [option()]) :: {:ok, pid()}
+  def start_link(port_or_conn, options \\ [])
+  def start_link(%Midiex.MidiPort{} = port, options), do: start_link(Midiex.open(port), options)
+
+  def start_link(%Midiex.OutConn{} = conn, options) do
     options
     |> Enum.into(%{})
     |> Map.take(Map.keys(@default_initial_state))
+    |> Map.put(:conn, conn)
     |> then(fn options -> Map.merge(@default_initial_state, options) end)
-    |> Map.put(:conn, Midiex.open(port))
     |> then(fn options -> GenServer.start_link(__MODULE__, options) end)
   end
 

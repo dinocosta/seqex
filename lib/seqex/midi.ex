@@ -17,7 +17,7 @@ defmodule Seqex.MIDI do
   # Base note for which to perform the calculation when transforming atom to integer.
   # This is the C4 note, so we know we should compare the atom's note scale to 4.
   @base_note 60
-  @base_scale 4
+  @base_scale 3
 
   # How many semitones to increment the note value by, depending on it's distance to the note C.
   @note_increment %{"C" => 0, "D" => 2, "E" => 4, "F" => 5, "G" => 7, "A" => 9, "B" => 11}
