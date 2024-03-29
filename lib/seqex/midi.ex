@@ -56,13 +56,13 @@ defmodule Seqex.MIDI do
   ## Examples
 
       iex> Seqex.MIDI.atom_to_note(:C4)
-      60
+      72
       iex> Seqex.MIDI.atom_to_note(:B5)
-      83
+      95
       iex> Seqex.MIDI.atom_to_note(:Db3)
-      49
+      61
       iex> Seqex.MIDI.atom_to_note(:Cs3)
-      49
+      61
   """
   @spec atom_to_note(atom()) :: 0..127
   def atom_to_note(atom) do
@@ -77,5 +77,92 @@ defmodule Seqex.MIDI do
         (String.to_integer(scale) - @base_scale) * 12 + @base_note + @note_increment[note] +
           @accidental_increment[accidental]
     end)
+  end
+
+  @doc """
+  Converts a note's integer representation into the respective note's atom.
+
+  ## Options
+
+  * `:accidentals` - When set to `:sharp`, the note will be represented as a sharp note, and when set to `:flat`, the
+    note will be represented as a flat note. Uses `:sharp` by default.
+
+  ## Examples
+
+      iex> Seqex.MIDI.note_to_atom(72)
+      :C4
+      iex> Seqex.MIDI.note_to_atom(95)
+      :B5
+      iex> Seqex.MIDI.note_to_atom(61, accidentals: :flat)
+      :Db3
+      iex> Seqex.MIDI.note_to_atom(61)
+      :Cs3
+  """
+  @spec note_to_atom(0..127) :: atom()
+  def note_to_atom(note, options \\ []) do
+    sharp? = Keyword.get(options, :accidentals, :sharp) == :sharp
+    flat? = Keyword.get(options, :accidentals, :flat) == :flat
+
+    scale = div(note - @base_note, 12) + @base_scale
+
+    {letter, sharp_or_flat} =
+      case Enum.find(@note_increment, fn {_letter, value} -> value == rem(note - @base_note, 12) end) do
+        {letter, _value} ->
+          {letter, ""}
+
+        nil when sharp? ->
+          @note_increment
+          |> Enum.find(@note_increment, fn {_letter, value} -> value == rem(note - 1 - @base_note, 12) end)
+          |> then(fn {letter, _value} -> {letter, "s"} end)
+
+        nil when flat? ->
+          @note_increment
+          |> Enum.find(@note_increment, fn {_letter, value} -> value == rem(note + 1 - @base_note, 12) end)
+          |> then(fn {letter, _value} -> {letter, "b"} end)
+      end
+
+    :"#{letter}#{sharp_or_flat}#{scale}"
+  end
+
+  @doc """
+  Returns a list of notes for a major triad, given the root note.
+
+  ## Examples
+
+      iex> Seqex.MIDI.major_triad(:C4)
+      [:C4, :E4, :G4]
+
+      iex> Seqex.MIDI.major_triad(60)
+      [60, 64, 67]
+  """
+  @spec major_triad(atom()) :: [note()]
+  def major_triad(root) when is_integer(root), do: [root, root + 4, root + 7]
+
+  def major_triad(root) when is_atom(root) do
+    root
+    |> atom_to_note()
+    |> major_triad()
+    |> Enum.map(&note_to_atom/1)
+  end
+
+  @doc """
+  Returns a list of notes for a minor triad, given the root note.
+
+  ## Examples
+
+      iex> Seqex.MIDI.minor_triad(:C4)
+      [:C4, :Ds4, :G4]
+
+      iex> Seqex.MIDI.minor_triad(60)
+      [60, 63, 67]
+  """
+  @spec minor_triad(atom()) :: [note()]
+  def minor_triad(root) when is_integer(root), do: [root, root + 3, root + 7]
+
+  def minor_triad(root) when is_atom(root) do
+    root
+    |> atom_to_note()
+    |> minor_triad()
+    |> Enum.map(&note_to_atom/1)
   end
 end
