@@ -4,6 +4,7 @@ defmodule SeqexWeb.Live do
   require Logger
 
   alias Seqex.Sequencer
+  alias Phoenix.PubSub
 
   @default_bpm 120
 
@@ -35,6 +36,10 @@ defmodule SeqexWeb.Live do
   end
 
   def mount(_params, _session, socket) do
+    # Subscribe to the topic related to the sequencer, so that we can both broadcast updates as well as receive
+    # messages related to the changes in the sequencer's state.
+    PubSub.subscribe(Seqex.PubSub, "sequencer:update")
+
     # When mounting, we'll first see if there's already a process with the `Seqex.Sequencer` name, if that's the case
     # then we'll use it's PID instead of starting a new GenServer for the sequencer. This allows us to control the
     # same sequencer, independently of the client that is connecting to the live view.
@@ -56,8 +61,22 @@ defmodule SeqexWeb.Live do
     end
   end
 
-  def handle_event("bpm-dec", _unsigned_params, socket), do: update_bpm(socket, socket.assigns.bpm - 1)
-  def handle_event("bpm-inc", _unsigned_params, socket), do: update_bpm(socket, socket.assigns.bpm + 1)
+  def handle_info({:bpm, bpm}, state) do
+    IO.puts("Handling message!")
+    {:noreply, assign(state, :bpm, bpm)}
+  end
+
+  def handle_event("bpm-dec", _unsigned_params, socket) do
+    (socket.assigns.bpm - 1)
+    |> tap(fn bpm -> PubSub.broadcast_from(Seqex.PubSub, self(), "sequencer:update", {:bpm, bpm}) end)
+    |> then(fn bpm -> update_bpm(socket, bpm) end)
+  end
+
+  def handle_event("bpm-inc", _unsigned_params, socket) do
+    (socket.assigns.bpm + 1)
+    |> tap(fn bpm -> PubSub.broadcast_from(Seqex.PubSub, self(), "sequencer:update", {:bpm, bpm}) end)
+    |> then(fn bpm -> update_bpm(socket, bpm) end)
+  end
 
   defp update_bpm(socket, bpm) do
     Sequencer.update_bpm(socket.assigns.sequencer, bpm)
