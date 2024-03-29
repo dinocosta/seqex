@@ -67,10 +67,7 @@ defmodule Seqex.Sequencer do
   # Stops the previous note(s) in the sequence and plays the next one(s), scheduling another cast to the GenServer to
   # trigger the one(s) after.
   @impl true
-  def handle_info(
-        :play,
-        %{playing?: true, sequence: sequence, conn: conn, position: position} = state
-      ) do
+  def handle_info(:play, %{playing?: true, sequence: sequence, conn: conn, position: position} = state) do
     # TODO: Improve this to use that sweet sweet math I just seem to be able to remember right now :melt:
     # We're using the `|| []` bit to make sure we also support steps with empty notes (`nil`).
     current_notes = List.flatten([Enum.at(sequence, position) || []])
@@ -99,6 +96,9 @@ defmodule Seqex.Sequencer do
   # again, to avoid the sequencer acting weird.
   @impl true
   def handle_call(:is_playing?, _from, state), do: {:reply, state.playing?, state}
+
+  # Returns the current BPM of the sequencer.
+  def handle_call(:bpm, _from, state), do: {:reply, state.bpm, state}
 
   # Stops the sequencer. In order to make sure no note is left hanging this will send a `note_off` message to all of
   # the possible note values in the MIDI specification. This should probably be updated to actually save the current
@@ -204,4 +204,10 @@ defmodule Seqex.Sequencer do
   @spec update_sequence(pid(), [MIDI.note() | [MIDI.note()]]) :: :ok
   def update_sequence(sequencer, sequence),
     do: GenServer.cast(sequencer, {:update_sequence, sequence})
+
+  @doc """
+  Returns the sequencer's BPM.
+  """
+  @spec bpm(pid()) :: non_neg_integer()
+  def bpm(sequencer), do: GenServer.call(sequencer, :bpm)
 end

@@ -51,7 +51,7 @@ defmodule SeqexWeb.Live do
       pid ->
         socket
         |> assign(:sequencer, pid)
-        |> assign(:bpm, @default_bpm)
+        |> assign(:bpm, Sequencer.bpm(pid))
         |> then(fn socket -> {:ok, socket} end)
     end
   end
