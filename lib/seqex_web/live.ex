@@ -35,16 +35,25 @@ defmodule SeqexWeb.Live do
   end
 
   def mount(_params, _session, socket) do
-    output_port = Enum.find(Midiex.ports(), fn port -> port.direction == :output end)
-    connection = Midiex.open(output_port)
-    args = %{sequence: [60, 64, 67, 71], conn: connection, bpm: @default_bpm}
+    # When mounting, we'll first see if there's already a process with the `Seqex.Sequencer` name, if that's the case
+    # then we'll use it's PID instead of starting a new GenServer for the sequencer. This allows us to control the
+    # same sequencer, independently of the client that is connecting to the live view.
+    case Process.whereis(Seqex.Sequencer) do
+      nil ->
+        :output
+        |> Midiex.ports()
+        |> List.first()
+        |> Sequencer.start_link(sequence: [:C4, :E4, :G4, :B4], bpm: @default_bpm, name: Seqex.Sequencer)
+        |> then(fn {:ok, sequencer} -> assign(socket, :sequencer, sequencer) end)
+        |> assign(:bpm, @default_bpm)
+        |> then(fn socket -> {:ok, socket} end)
 
-    {:ok, sequencer} = GenServer.start_link(Sequencer, args)
-
-    socket
-    |> assign(:sequencer, sequencer)
-    |> assign(:bpm, @default_bpm)
-    |> then(fn socket -> {:ok, socket} end)
+      pid ->
+        socket
+        |> assign(:sequencer, pid)
+        |> assign(:bpm, @default_bpm)
+        |> then(fn socket -> {:ok, socket} end)
+    end
   end
 
   def handle_event("bpm-dec", _unsigned_params, socket), do: update_bpm(socket, socket.assigns.bpm - 1)
@@ -52,7 +61,7 @@ defmodule SeqexWeb.Live do
 
   defp update_bpm(socket, bpm) do
     Sequencer.update_bpm(socket.assigns.sequencer, bpm)
-    {:noreply, assign(socket, :bpm, bpm)} 
+    {:noreply, assign(socket, :bpm, bpm)}
   end
 
   def handle_event("play", _unsigned_params, socket) do

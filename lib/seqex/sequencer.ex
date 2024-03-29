@@ -150,12 +150,16 @@ defmodule Seqex.Sequencer do
   def start_link(%Midiex.MidiPort{} = port, options), do: start_link(Midiex.open(port), options)
 
   def start_link(%Midiex.OutConn{} = conn, options) do
-    options
-    |> Enum.into(%{})
-    |> Map.take(Map.keys(@default_initial_state))
-    |> Map.put(:conn, conn)
-    |> then(fn options -> Map.merge(@default_initial_state, options) end)
-    |> then(fn options -> GenServer.start_link(__MODULE__, options) end)
+    state =
+      options
+      |> Enum.into(%{})
+      |> Map.take(Map.keys(@default_initial_state))
+      |> Map.put(:conn, conn)
+      |> then(fn options -> Map.merge(@default_initial_state, options) end)
+
+    genserver_options = Enum.reject(options, fn {key, _value} -> key in Map.keys(@default_initial_state) end)
+
+    GenServer.start_link(__MODULE__, state, genserver_options)
   end
 
   @doc """
