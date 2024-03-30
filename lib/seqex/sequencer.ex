@@ -16,12 +16,13 @@ defmodule Seqex.Sequencer do
 
   alias Seqex.MIDI
 
+  @type sequence :: [MIDI.note() | [MIDI.note()]]
+
   @typedoc """
   * `sequence` - List of notes, or chords, to be played in the sequence.
   * `bpm` - The sequencer's BPM.
   """
-  @type option ::
-          {:sequence, [MIDI.note() | [MIDI.note()]]} | {:bpm, non_neg_integer()} | {:connection, %Midiex.OutConn{}}
+  @type option :: {:sequence, sequence()} | {:bpm, non_neg_integer()} | {:connection, %Midiex.OutConn{}}
 
   @typedoc """
   * `sequence` - List of notes, or chords, to be played in the sequence.
@@ -34,7 +35,7 @@ defmodule Seqex.Sequencer do
   * `position` - The current position in the sequence.
   """
   @type state :: %{
-          sequence: [MIDI.note() | [MIDI.note()]],
+          sequence: sequence(),
           conn: %Midiex.OutConn{},
           bpm: non_neg_integer(),
           playing?: boolean(),
@@ -99,6 +100,9 @@ defmodule Seqex.Sequencer do
 
   # Returns the current BPM of the sequencer.
   def handle_call(:bpm, _from, state), do: {:reply, state.bpm, state}
+
+  # Returns the sequence of notes the sequencer is playing.
+  def handle_call(:sequence, _from, state), do: {:reply, state.sequence, state}
 
   # Stops the sequencer. In order to make sure no note is left hanging this will send a `note_off` message to all of
   # the possible note values in the MIDI specification. This should probably be updated to actually save the current
@@ -210,4 +214,10 @@ defmodule Seqex.Sequencer do
   """
   @spec bpm(pid()) :: non_neg_integer()
   def bpm(sequencer), do: GenServer.call(sequencer, :bpm)
+
+  @doc """
+  Returns the sequencer's current sequence of notes.
+  """
+  @spec sequence(pid()) :: sequence()
+  def sequence(sequencer), do: GenServer.call(sequencer, :sequence)
 end
