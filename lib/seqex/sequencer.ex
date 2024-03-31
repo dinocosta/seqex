@@ -220,4 +220,10 @@ defmodule Seqex.Sequencer do
   """
   @spec sequence(pid()) :: sequence()
   def sequence(sequencer), do: GenServer.call(sequencer, :sequence)
+
+  @doc """
+  Returns the PubSub topic the sequencer uses to broadcast update messages (updated bpm, updated sequence, etc.).
+  """
+  @spec topic(pid()) :: String.t()
+  def topic(sequencer), do: "seqex.sequencer:#{inspect(sequencer)}"
 end

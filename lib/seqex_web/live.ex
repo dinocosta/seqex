@@ -16,7 +16,6 @@ defmodule SeqexWeb.Live do
     ~H"""
     <div class="bg-light-gray min-h-screen p-14">
       <h1 class="text-3xl font-bold mb-14">SeqEx</h1>
-      <h1 class="text-xl font-bold mb-14"><%= inspect(@sequence) %></h1>
 
       <div class="flex gap-4 mb-4">
         <div class="bg-orange text-white p-4" phx-click="play">Play</div>
@@ -26,7 +25,7 @@ defmodule SeqexWeb.Live do
         <div class="bg-gray text-white p-4" phx-click="bpm-inc">+</div>
       </div>
 
-      <div class="flex gap-4">
+      <div class="flex gap-4 mb-4">
         <%= for id <- 1..4 do %>
           <div class="w-14 h-14 bg-dark-gray">
             <p class="text-white"><%= id %></p>
@@ -41,31 +40,30 @@ defmodule SeqexWeb.Live do
     # When mounting, we'll first see if there's already a process with the `Seqex.Sequencer` name, if that's the case
     # then we'll use it's PID instead of starting a new GenServer for the sequencer. This allows us to control the
     # same sequencer, independently of the client that is connecting to the live view.
-    case Process.whereis(Seqex.Sequencer) do
-      nil ->
-        :output
-        |> Midiex.ports()
-        |> List.first()
-        |> Sequencer.start_link(sequence: @default_sequence, bpm: @default_bpm, name: Seqex.Sequencer)
-        |> then(fn {:ok, sequencer} -> assign(socket, :sequencer, sequencer) end)
-        |> then(fn socket -> assign(socket, :topic, "seqex.sequencer:#{inspect(socket.assigns.sequencer)}") end)
-        |> assign(:bpm, @default_bpm)
-        |> assign(:sequence, @default_sequence)
-        |> then(fn socket -> {:ok, socket} end)
+    sequencer =
+      case Process.whereis(Seqex.Sequencer) do
+        nil ->
+          :output
+          |> Midiex.ports()
+          |> List.first()
+          |> Sequencer.start_link(sequence: @default_sequence, bpm: @default_bpm, name: Seqex.Sequencer)
+          |> then(fn {:ok, sequencer} -> sequencer end)
 
-      pid ->
-        socket
-        |> assign(:sequencer, pid)
-        |> assign(:bpm, Sequencer.bpm(pid))
-        |> assign(:sequence, Sequencer.sequence(pid))
-        |> assign(:topic, "seqex.sequencer:#{inspect(pid)}")
-        |> then(fn socket -> {:ok, socket} end)
-    end
-    |> tap(fn {:ok, socket} ->
+        sequencer ->
+          sequencer
+      end
+
+    socket
+    |> assign(:sequencer, sequencer)
+    |> assign(:bpm, Sequencer.bpm(sequencer))
+    |> assign(:sequence, Sequencer.sequence(sequencer))
+    |> assign(:topic, Sequencer.topic(sequencer))
+    |> tap(fn socket ->
       # Subscribe to the topic related to the sequencer, so that we can both broadcast updates as well as receive
       # messages related to the changes in the sequencer's state.
       PubSub.subscribe(Seqex.PubSub, socket.assigns.topic)
     end)
+    |> then(fn socket -> {:ok, socket} end)
   end
 
   def handle_info({:bpm, bpm}, state), do: {:noreply, assign(state, :bpm, bpm)}
@@ -83,9 +81,10 @@ defmodule SeqexWeb.Live do
     |> then(fn bpm -> update_bpm(socket, bpm) end)
   end
 
-  defp update_bpm(socket, bpm) do
-    Sequencer.update_bpm(socket.assigns.sequencer, bpm)
-    {:noreply, assign(socket, :bpm, bpm)}
+  def handle_event("sequence-update", params, socket) do
+    IO.puts("I GOT CALLEd")
+    dbg(params)
+    {:noreply, socket}
   end
 
   def handle_event("play", _unsigned_params, socket) do
@@ -96,5 +95,10 @@ defmodule SeqexWeb.Live do
   def handle_event("stop", _unsigned_params, socket) do
     Sequencer.stop(socket.assigns.sequencer)
     {:noreply, socket}
+  end
+
+  defp update_bpm(socket, bpm) do
+    Sequencer.update_bpm(socket.assigns.sequencer, bpm)
+    {:noreply, assign(socket, :bpm, bpm)}
   end
 end
