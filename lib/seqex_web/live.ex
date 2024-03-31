@@ -66,26 +66,13 @@ defmodule SeqexWeb.Live do
     |> then(fn socket -> {:ok, socket} end)
   end
 
+  # Handlers for the PubSub broadcast messages.
   def handle_info({:bpm, bpm}, state), do: {:noreply, assign(state, :bpm, bpm)}
   def handle_info({:sequence, sequence}, state), do: {:noreply, assign(state, :sequence, sequence)}
 
-  def handle_event("bpm-dec", _unsigned_params, socket) do
-    (socket.assigns.bpm - 1)
-    |> tap(fn bpm -> PubSub.broadcast_from(Seqex.PubSub, self(), socket.assigns.topic, {:bpm, bpm}) end)
-    |> then(fn bpm -> update_bpm(socket, bpm) end)
-  end
-
-  def handle_event("bpm-inc", _unsigned_params, socket) do
-    (socket.assigns.bpm + 1)
-    |> tap(fn bpm -> PubSub.broadcast_from(Seqex.PubSub, self(), socket.assigns.topic, {:bpm, bpm}) end)
-    |> then(fn bpm -> update_bpm(socket, bpm) end)
-  end
-
-  def handle_event("sequence-update", params, socket) do
-    IO.puts("I GOT CALLEd")
-    dbg(params)
-    {:noreply, socket}
-  end
+  # Handlers for `phx-click` events.
+  def handle_event("bpm-dec", _unsigned_params, socket), do: update_bpm(socket, socket.assigns.bpm - 1)
+  def handle_event("bpm-inc", _unsigned_params, socket), do: update_bpm(socket, socket.assigns.bpm + 1)
 
   def handle_event("play", _unsigned_params, socket) do
     Sequencer.play(socket.assigns.sequencer)
@@ -98,7 +85,7 @@ defmodule SeqexWeb.Live do
   end
 
   defp update_bpm(socket, bpm) do
-    Sequencer.update_bpm(socket.assigns.sequencer, bpm)
+    Sequencer.update_bpm(socket.assigns.sequencer, bpm, self())
     {:noreply, assign(socket, :bpm, bpm)}
   end
 end

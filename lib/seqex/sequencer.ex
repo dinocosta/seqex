@@ -14,6 +14,7 @@ defmodule Seqex.Sequencer do
 
   use GenServer
 
+  alias Phoenix.PubSub
   alias Seqex.MIDI
 
   @type sequence :: [MIDI.note() | [MIDI.note()]]
@@ -198,16 +199,33 @@ defmodule Seqex.Sequencer do
 
   @doc """
   Updates the beats per minutes of the `sequencer` to the ones in `bpm`.
+  Since this function call broadcasts updates on the sequencer's PubSub topic, the `caller` argument can be used to
+  define which process triggered this update and avoid sending the message to that process.
   """
-  @spec update_bpm(pid(), non_neg_integer()) :: :ok
-  def update_bpm(sequencer, bpm), do: GenServer.cast(sequencer, {:update_bpm, bpm})
+  @spec update_bpm(pid(), non_neg_integer(), caller :: pid()) :: :ok
+  def update_bpm(sequencer, bpm, caller \\ nil) do
+    GenServer.cast(sequencer, {:update_bpm, bpm})
+
+    case caller do
+      nil -> PubSub.broadcast(Seqex.PubSub, topic(sequencer), {:bpm, bpm})
+      pid -> PubSub.broadcast_from(Seqex.PubSub, pid, topic(sequencer), {:bpm, bpm})
+    end
+  end
 
   @doc """
   Updates the sequence used by the `sequencer` to the ones in `sequence`.
+  Since this function call broadcasts updates on the sequencer's PubSub topic, the `caller` argument can be used to
+  define which process triggered this update and avoid sending the message to that process.
   """
-  @spec update_sequence(pid(), [MIDI.note() | [MIDI.note()]]) :: :ok
-  def update_sequence(sequencer, sequence),
-    do: GenServer.cast(sequencer, {:update_sequence, sequence})
+  @spec update_sequence(pid(), [MIDI.note() | [MIDI.note()]], caller :: pid()) :: :ok
+  def update_sequence(sequencer, sequence, caller \\ nil) do
+    GenServer.cast(sequencer, {:update_sequence, sequence})
+
+    case caller do
+      nil -> PubSub.broadcast(Seqex.PubSub, topic(sequencer), {:sequence, sequence})
+      pid -> PubSub.broadcast_from(Seqex.PubSub, pid, topic(sequencer), {:sequence, sequence})
+    end
+  end
 
   @doc """
   Returns the sequencer's BPM.
