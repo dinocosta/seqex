@@ -29,7 +29,7 @@ defmodule SeqexWeb.LiveSequencer do
               phx-click="update-note"
               phx-value-index={index}
               phx-value-note={note}
-              class={if note in Enum.at(@sequence, index), do: "w-8 h-8 bg-orange", else: "w-8 h-8 bg-gray"}
+              class={"w-8 h-8 " <> background_color(index, note, @sequence)}
             />
           <% end %>
         </div>
@@ -123,5 +123,10 @@ defmodule SeqexWeb.LiveSequencer do
   defp update_bpm(socket, bpm) do
     Sequencer.update_bpm(socket.assigns.sequencer, bpm, self())
     {:noreply, assign(socket, :bpm, bpm)}
+  end
+
+  # Helper function to determine the background color of the button based on the note and the sequence.
+  defp background_color(index, note, sequence) do
+    if note in Enum.at(sequence, index), do: "bg-orange", else: "bg-gray"
   end
 end
