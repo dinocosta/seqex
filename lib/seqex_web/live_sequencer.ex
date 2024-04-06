@@ -1,5 +1,5 @@
 defmodule SeqexWeb.LiveSequencer do
-  use Phoenix.LiveView
+  use SeqexWeb, :live_view
 
   require Logger
 
@@ -12,7 +12,7 @@ defmodule SeqexWeb.LiveSequencer do
   def render(assigns) do
     ~H"""
     <div class="bg-light-gray min-h-screen p-14">
-      <h1 class="text-3xl font-bold mb-14">SeqEx</h1>
+      <h1 class="text-3xl font-bold mb-14" id="title" phx-hook="SetupSequencer" phx-update="ignore">SeqEx</h1>
 
       <div class="flex gap-4 mb-4">
         <div class="bg-orange text-white p-4" phx-click="play">Play</div>
@@ -67,6 +67,24 @@ defmodule SeqexWeb.LiveSequencer do
       # messages related to the changes in the sequencer's state.
       PubSub.subscribe(Seqex.PubSub, socket.assigns.topic)
     end)
+    |> then(fn socket ->
+      # For the existing notes in the sequencer, send a `"sequencer-toggle"` event so that those pads are highlighted
+      # when the user first opens the page.
+      socket.assigns.sequence
+      |> Enum.with_index()
+      |> Enum.reduce(socket, fn
+        {nil, _index}, socket ->
+          socket
+
+        {notes, index}, socket when is_list(notes) ->
+          Enum.reduce(notes, socket, fn note, socket ->
+            push_event(socket, "sequencer-toggle", %{note: note, index: index})
+          end)
+
+        {note, index}, socket ->
+          push_event(socket, "sequencer-toggle", %{note: note, index: index})
+      end)
+    end)
     |> then(fn socket -> {:ok, socket} end)
   end
 
@@ -112,7 +130,12 @@ defmodule SeqexWeb.LiveSequencer do
         if Enum.member?(notes, note), do: List.delete(notes, note), else: [note | notes]
     end)
     |> tap(fn sequence -> Sequencer.update_sequence(assigns.sequencer, sequence, self()) end)
-    |> then(fn sequence -> {:noreply, assign(socket, :sequence, sequence)} end)
+    |> then(fn sequence ->
+      socket
+      |> push_event("sequencer-toggle", %{index: index, note: note})
+      |> assign(:sequence, sequence)
+      |> then(fn socket -> {:noreply, socket} end)
+    end)
   end
 
   defp update_bpm(socket, bpm) do
