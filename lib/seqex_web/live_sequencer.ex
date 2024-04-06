@@ -1,4 +1,4 @@
-defmodule SeqexWeb.Live do
+defmodule SeqexWeb.LiveSequencer do
   use Phoenix.LiveView
 
   require Logger
@@ -7,12 +7,9 @@ defmodule SeqexWeb.Live do
   alias Seqex.Sequencer
 
   @default_bpm 120
-  @default_sequence [:C4, :E4, :G4, :B4]
+  @default_sequence [:C4, nil, :E4, nil, :G4, nil, :B4, nil]
 
   def render(assigns) do
-    ports = Midiex.ports()
-    assigns = assign(assigns, :ports, ports)
-
     ~H"""
     <div class="bg-light-gray min-h-screen p-14">
       <h1 class="text-3xl font-bold mb-14">SeqEx</h1>
@@ -25,6 +22,13 @@ defmodule SeqexWeb.Live do
         <div class="bg-gray text-white p-4" phx-click="bpm-inc">+</div>
       </div>
 
+      <%= for note <- [:C4, :D4, :E4, :F4, :G4, :A4, :B4] do %>
+        <div class="block space-x-2 mb-2">
+          <%= for index <- 0..7 do %>
+            <button phx-click="update-note" phx-value-index={index} phx-value-note={note} class="w-8 h-8 bg-gray" />
+          <% end %>
+        </div>
+      <% end %>
       <div class="flex gap-4 mb-4">
         <%= for id <- 1..4 do %>
           <div class="w-14 h-14 bg-dark-gray">
@@ -82,6 +86,33 @@ defmodule SeqexWeb.Live do
   def handle_event("stop", _unsigned_params, socket) do
     Sequencer.stop(socket.assigns.sequencer)
     {:noreply, socket}
+  end
+
+  def handle_event("update-note", %{"index" => index, "note" => note}, %{assigns: assigns} = socket) do
+    index = String.to_integer(index)
+    note = String.to_atom(note)
+
+    assigns.sequence
+    |> List.update_at(index, fn
+      # No notes in this step, add the single note.
+      nil ->
+        note
+
+      # Note already present in that same index, so transform to empty step.
+      existing_note when existing_note == note ->
+        nil
+
+      # Note already present in that same index, so add the note and create a list.
+      existing_note when is_atom(existing_note) ->
+        [note, existing_note]
+
+      # A list of notes is already present in this step.
+      # If the note is in the list, reomve the note, otherwise add it.
+      notes when is_list(notes) ->
+        if Enum.member?(notes, note), do: List.delete(notes, note), else: [note | notes]
+    end)
+    |> tap(fn sequence -> Sequencer.update_sequence(assigns.sequencer, sequence, self()) end)
+    |> then(fn sequence -> {:noreply, assign(socket, :sequence, sequence)} end)
   end
 
   defp update_bpm(socket, bpm) do
