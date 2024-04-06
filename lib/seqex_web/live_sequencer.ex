@@ -17,9 +17,11 @@ defmodule SeqexWeb.LiveSequencer do
       <div class="flex gap-4 mb-4">
         <div class="bg-orange text-white p-4" phx-click="play">Play</div>
         <div class="bg-gray text-white p-4" phx-click="stop">Stop</div>
-        <div class="bg-white text-dark-gray p-4"><%= @bpm %></div>
-        <div class="bg-gray text-white p-4" phx-click="bpm-dec">-</div>
-        <div class="bg-gray text-white p-4" phx-click="bpm-inc">+</div>
+        <.form for={@form}>
+          <input type="text" name="bpm" default={@bpm} phx-change="update-bpm" phx-debounce="750" value={@bpm} />
+        </.form>
+        <div class="bg-gray text-white p-4" phx-click="update-bpm" phx-value-bpm={@bpm - 1}>-</div>
+        <div class="bg-gray text-white p-4" phx-click="update-bpm" phx-value-bpm={@bpm + 1}>+</div>
       </div>
 
       <%= for note <- [:C4, :D4, :E4, :F4, :G4, :A4, :B4] do %>
@@ -65,6 +67,7 @@ defmodule SeqexWeb.LiveSequencer do
     socket
     |> assign(:sequencer, sequencer)
     |> assign(:bpm, Sequencer.bpm(sequencer))
+    |> assign(:form, %{"bpm" => @default_bpm})
     |> assign(:sequence, Sequencer.sequence(sequencer))
     |> assign(:topic, Sequencer.topic(sequencer))
     |> tap(fn socket ->
@@ -80,8 +83,12 @@ defmodule SeqexWeb.LiveSequencer do
   def handle_info({:sequence, sequence}, state), do: {:noreply, assign(state, :sequence, sequence)}
 
   # Handlers for `phx-click` events.
-  def handle_event("bpm-dec", _unsigned_params, socket), do: update_bpm(socket, socket.assigns.bpm - 1)
-  def handle_event("bpm-inc", _unsigned_params, socket), do: update_bpm(socket, socket.assigns.bpm + 1)
+  def handle_event("update-bpm", %{"bpm" => bpm}, socket) do
+    case Integer.parse(bpm) do
+      {bpm, ""} when bpm > 0 -> update_bpm(socket, bpm)
+      :error -> {:noreply, put_flash(socket, :error, "BPM must be an integer greater than 0.")}
+    end
+  end
 
   def handle_event("play", _unsigned_params, socket) do
     Sequencer.play(socket.assigns.sequencer)
