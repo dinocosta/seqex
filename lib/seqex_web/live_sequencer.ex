@@ -26,10 +26,18 @@ defmodule SeqexWeb.LiveSequencer do
 
       <div class="flex gap-3 mb-2">
         <%= for step <- 1..length(@sequence) do %>
-          <div
-            id={"step-#{step}"}
-            class={if step == @step, do: "w-8 h-8 rounded-full bg-orange", else: "w-8 h-8 rounded-full bg-white"}
-          >
+          <div class="w-14">
+            <p class="block font-mono"><%= step %></p>
+            <div class="flex">
+              <div
+                id={"step-#{step}"}
+                class={
+                  if step == @step,
+                    do: "grow m-auto h-2 rounded-full bg-orange",
+                    else: "grow m-auto h-2 rounded-full bg-white"
+                }
+              />
+            </div>
           </div>
         <% end %>
       </div>
@@ -41,19 +49,13 @@ defmodule SeqexWeb.LiveSequencer do
               phx-click="update-note"
               phx-value-index={index}
               phx-value-note={note}
-              class={"w-8 h-8 " <> background_color(index, note, @sequence)}
-            />
+              class="w-14 h-14 rounded-md bg-dark-gray"
+            >
+              <div class={"ml-10 mb-6 w-2 h-2 rounded-full " <> background_color(index, note, @sequence)} />
+            </button>
           <% end %>
         </div>
       <% end %>
-
-      <div class="flex gap-4 mb-4">
-        <%= for id <- 1..4 do %>
-          <div class="w-14 h-14 bg-dark-gray">
-            <p class="text-white"><%= id %></p>
-          </div>
-        <% end %>
-      </div>
     </div>
     """
   end
@@ -147,6 +149,6 @@ defmodule SeqexWeb.LiveSequencer do
 
   # Helper function to determine the background color of the button based on the note and the sequence.
   defp background_color(index, note, sequence) do
-    if note in Enum.at(sequence, index), do: "bg-orange", else: "bg-gray"
+    if note in Enum.at(sequence, index), do: "bg-orange", else: "bg-white"
   end
 end
