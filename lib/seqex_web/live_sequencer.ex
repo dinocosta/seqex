@@ -7,12 +7,12 @@ defmodule SeqexWeb.LiveSequencer do
   alias Seqex.Sequencer
 
   @default_bpm 120
-  @default_sequence [:C4, nil, :E4, nil, :G4, nil, :B4, nil]
+  @default_sequence [[:C4], [], [:E4], [], [:G4], [], [:B4], []]
 
   def render(assigns) do
     ~H"""
     <div class="bg-light-gray min-h-screen p-14">
-      <h1 class="text-3xl font-bold mb-14" id="title" phx-hook="SetupSequencer" phx-update="ignore">SeqEx</h1>
+      <h1 class="text-3xl font-bold mb-14" id="title">SeqEx</h1>
 
       <div class="flex gap-4 mb-4">
         <div class="bg-orange text-white p-4" phx-click="play">Play</div>
@@ -25,7 +25,12 @@ defmodule SeqexWeb.LiveSequencer do
       <%= for note <- [:C4, :D4, :E4, :F4, :G4, :A4, :B4] do %>
         <div class="block space-x-2 mb-2">
           <%= for index <- 0..7 do %>
-            <button phx-click="update-note" phx-value-index={index} phx-value-note={note} class="w-8 h-8 bg-gray" />
+            <button
+              phx-click="update-note"
+              phx-value-index={index}
+              phx-value-note={note}
+              class={if note in Enum.at(@sequence, index), do: "w-8 h-8 bg-orange", else: "w-8 h-8 bg-gray"}
+            />
           <% end %>
         </div>
       <% end %>
@@ -66,24 +71,6 @@ defmodule SeqexWeb.LiveSequencer do
       # Subscribe to the topic related to the sequencer, so that we can both broadcast updates as well as receive
       # messages related to the changes in the sequencer's state.
       PubSub.subscribe(Seqex.PubSub, socket.assigns.topic)
-    end)
-    |> then(fn socket ->
-      # For the existing notes in the sequencer, send a `"sequencer-toggle"` event so that those pads are highlighted
-      # when the user first opens the page.
-      socket.assigns.sequence
-      |> Enum.with_index()
-      |> Enum.reduce(socket, fn
-        {nil, _index}, socket ->
-          socket
-
-        {notes, index}, socket when is_list(notes) ->
-          Enum.reduce(notes, socket, fn note, socket ->
-            push_event(socket, "sequencer-toggle", %{note: note, index: index})
-          end)
-
-        {note, index}, socket ->
-          push_event(socket, "sequencer-toggle", %{note: note, index: index})
-      end)
     end)
     |> then(fn socket -> {:ok, socket} end)
   end
@@ -130,12 +117,7 @@ defmodule SeqexWeb.LiveSequencer do
         if Enum.member?(notes, note), do: List.delete(notes, note), else: [note | notes]
     end)
     |> tap(fn sequence -> Sequencer.update_sequence(assigns.sequencer, sequence, self()) end)
-    |> then(fn sequence ->
-      socket
-      |> push_event("sequencer-toggle", %{index: index, note: note})
-      |> assign(:sequence, sequence)
-      |> then(fn socket -> {:noreply, socket} end)
-    end)
+    |> then(fn sequence -> {:noreply, assign(socket, :sequence, sequence)} end)
   end
 
   defp update_bpm(socket, bpm) do
