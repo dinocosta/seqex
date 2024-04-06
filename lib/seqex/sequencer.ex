@@ -87,6 +87,9 @@ defmodule Seqex.Sequencer do
     MIDI.note_on(conn, current_notes)
     Process.send_after(self(), :play, interval)
 
+    # Broadcast any time the sequencer has moved to a different step, in case clients want to display the current step.
+    PubSub.broadcast(Seqex.PubSub, topic(self()), {:step, position + 1})
+
     {:noreply, Map.merge(state, %{position: next_position, notes_playing: current_notes})}
   end
 

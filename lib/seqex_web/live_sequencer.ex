@@ -24,7 +24,17 @@ defmodule SeqexWeb.LiveSequencer do
         <div class="bg-gray text-white p-4" phx-click="update-bpm" phx-value-bpm={@bpm + 1}>+</div>
       </div>
 
-      <%= for note <- [:C4, :D4, :E4, :F4, :G4, :A4, :B4] do %>
+      <div class="flex gap-3 mb-2">
+        <%= for step <- 1..length(@sequence) do %>
+          <div
+            id={"step-#{step}"}
+            class={if step == @step, do: "w-8 h-8 rounded-full bg-orange", else: "w-8 h-8 rounded-full bg-white"}
+          >
+          </div>
+        <% end %>
+      </div>
+
+      <%= for {note, step} <- Enum.with_index([:C4, :D4, :E4, :F4, :G4, :A4, :B4]) do %>
         <div class="block space-x-2 mb-2">
           <%= for index <- 0..7 do %>
             <button
@@ -36,6 +46,7 @@ defmodule SeqexWeb.LiveSequencer do
           <% end %>
         </div>
       <% end %>
+
       <div class="flex gap-4 mb-4">
         <%= for id <- 1..4 do %>
           <div class="w-14 h-14 bg-dark-gray">
@@ -69,6 +80,7 @@ defmodule SeqexWeb.LiveSequencer do
     |> assign(:bpm, Sequencer.bpm(sequencer))
     |> assign(:form, %{"bpm" => @default_bpm})
     |> assign(:sequence, Sequencer.sequence(sequencer))
+    |> assign(:step, 1)
     |> assign(:topic, Sequencer.topic(sequencer))
     |> tap(fn socket ->
       # Subscribe to the topic related to the sequencer, so that we can both broadcast updates as well as receive
@@ -81,6 +93,7 @@ defmodule SeqexWeb.LiveSequencer do
   # Handlers for the PubSub broadcast messages.
   def handle_info({:bpm, bpm}, state), do: {:noreply, assign(state, :bpm, bpm)}
   def handle_info({:sequence, sequence}, state), do: {:noreply, assign(state, :sequence, sequence)}
+  def handle_info({:step, step}, state), do: {:noreply, assign(state, :step, step)}
 
   # Handlers for `phx-click` events.
   def handle_event("update-bpm", %{"bpm" => bpm}, socket) do
