@@ -5,28 +5,19 @@ defmodule SeqexWeb.LiveSequencer do
 
   alias Phoenix.PubSub
   alias Seqex.Sequencer
+  alias SeqexWeb.Components.Icons
 
   @default_bpm 120
   @default_sequence [[:C4], [], [:E4], [], [:G4], [], [:B4], []]
 
   def render(assigns) do
     ~H"""
-    <div class="bg-light-gray min-h-screen p-14">
-      <h1 class="text-3xl font-bold mb-14" id="title">SeqEx</h1>
+    <div class="bg-light-gray min-h-screen p-4">
+      <div class="text-3xl font-bold mb-8 w-10 h-10 md:w-14 md:h-14 bg-orange rounded-full" />
 
-      <div class="flex gap-4 mb-4">
-        <div class="bg-orange text-white p-4" phx-click="play">Play</div>
-        <div class="bg-gray text-white p-4" phx-click="stop">Stop</div>
-        <.form for={@form}>
-          <input type="text" name="bpm" default={@bpm} phx-change="update-bpm" phx-debounce="750" value={@bpm} />
-        </.form>
-        <div class="bg-gray text-white p-4" phx-click="update-bpm" phx-value-bpm={@bpm - 1}>-</div>
-        <div class="bg-gray text-white p-4" phx-click="update-bpm" phx-value-bpm={@bpm + 1}>+</div>
-      </div>
-
-      <div class="flex gap-3 mb-2">
+      <div class="flex justify-center gap-1 md:gap-2 mb-2">
         <%= for step <- 1..length(@sequence) do %>
-          <div class="w-14">
+          <div class="w-10 md:w-14">
             <p class="block font-mono"><%= step %></p>
             <div class="flex">
               <div
@@ -42,20 +33,43 @@ defmodule SeqexWeb.LiveSequencer do
         <% end %>
       </div>
 
-      <%= for {note, step} <- Enum.with_index([:C4, :D4, :E4, :F4, :G4, :A4, :B4]) do %>
-        <div class="block space-x-2 mb-2">
-          <%= for index <- 0..7 do %>
-            <button
-              phx-click="update-note"
-              phx-value-index={index}
-              phx-value-note={note}
-              class="w-14 h-14 rounded-md bg-dark-gray"
-            >
-              <div class={"ml-10 mb-6 w-2 h-2 rounded-full " <> background_color(index, note, @sequence)} />
-            </button>
-          <% end %>
-        </div>
-      <% end %>
+      <div class="mb-8">
+        <%= for {note, step} <- Enum.with_index([:C4, :D4, :E4, :F4, :G4, :A4, :B4]) do %>
+          <div class="flex justify-center space-x-1 md:space-x-2 mb-2 overflow-x-scroll">
+            <%= for index <- 0..7 do %>
+              <button
+                phx-click="update-note"
+                phx-value-index={index}
+                phx-value-note={note}
+                class="w-10 h-10 md:w-14 md:h-14 rounded-md bg-dark-gray"
+              >
+                <div class={"ml-6 mb-4 md:ml-10 md:mb-6 w-2 h-2 rounded-full " <> background_color(index, note, @sequence)} />
+              </button>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="flex gap-1 md:gap-2 mb-4">
+        <div class="bg-orange text-white p-4 rounded-md" phx-click="play"><Icons.play /></div>
+        <div class="bg-gray text-white p-4 rounded-md" phx-click="stop"><Icons.pause /></div>
+      </div>
+
+      <div class="flex gap-1 md:gap-2 mb-4">
+        <.form for={@form} class="flex">
+          <input
+            type="text"
+            name="bpm"
+            default={@bpm}
+            phx-change="update-bpm"
+            phx-debounce="750"
+            value={@bpm}
+            class="rounded-md flex-grow"
+          />
+        </.form>
+        <div class="bg-gray text-white p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm - 1}><Icons.minus /></div>
+        <div class="bg-gray text-white p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm + 1}><Icons.plus /></div>
+      </div>
     </div>
     """
   end
