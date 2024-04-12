@@ -121,6 +121,9 @@ defmodule Seqex.Sequencer do
   # Returns the sequence of notes the sequencer is playing.
   def handle_call(:sequence, _from, state), do: {:reply, state.sequence, state}
 
+  # Returns the note length of the notes the sequencer is playing.
+  def handle_call(:note_length, _from, state), do: {:reply, state.note_length, state}
+
   # Stops the sequencer. In order to make sure no note is left hanging this will send a `note_off` message to all of
   # the possible note values in the MIDI specification. This should probably be updated to actually save the current
   # position in the GenServer's state, so that, when the sequencer is stopped we can just send the `note_off` message
@@ -274,6 +277,12 @@ defmodule Seqex.Sequencer do
   """
   @spec sequence(pid()) :: sequence()
   def sequence(sequencer), do: GenServer.call(sequencer, :sequence)
+
+  @doc """
+  Returns the sequencer's current note length.
+  """
+  @spec sequence(pid()) :: note_length()
+  def note_length(sequencer), do: GenServer.call(sequencer, :note_length)
 
   @doc """
   Returns the PubSub topic the sequencer uses to broadcast update messages (updated bpm, updated sequence, etc.).

@@ -34,7 +34,7 @@ defmodule SeqexWeb.LiveSequencer do
       </div>
 
       <div class="mb-8">
-        <%= for {note, step} <- Enum.with_index([:C4, :D4, :E4, :F4, :G4, :A4, :B4]) do %>
+        <%= for note <- [:C4, :D4, :E4, :F4, :G4, :A4, :B4] do %>
           <div class="flex justify-center space-x-1 md:space-x-2 mb-2 overflow-x-scroll">
             <%= for index <- 0..7 do %>
               <button
@@ -70,6 +70,12 @@ defmodule SeqexWeb.LiveSequencer do
         <div class="bg-gray text-white p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm - 1}><Icons.minus /></div>
         <div class="bg-gray text-white p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm + 1}><Icons.plus /></div>
       </div>
+
+      <div class="flex gap-1 md:gap-2 mb-4">
+        <p><%= @note_length %></p>
+        <div class="bg-orange text-white p-4 rounded-md font-mono" phx-click="note-length-shorten">x2</div>
+        <div class="bg-gray text-white p-4 rounded-md font-mono" phx-click="note-length-increase">:2</div>
+      </div>
     </div>
     """
   end
@@ -96,6 +102,7 @@ defmodule SeqexWeb.LiveSequencer do
     |> assign(:bpm, Sequencer.bpm(sequencer))
     |> assign(:form, %{"bpm" => @default_bpm})
     |> assign(:sequence, Sequencer.sequence(sequencer))
+    |> assign(:note_length, Sequencer.note_length(sequencer))
     |> assign(:step, 1)
     |> assign(:topic, Sequencer.topic(sequencer))
     |> tap(fn socket ->
@@ -154,6 +161,29 @@ defmodule SeqexWeb.LiveSequencer do
     end)
     |> tap(fn sequence -> Sequencer.update_sequence(assigns.sequencer, sequence, self()) end)
     |> then(fn sequence -> {:noreply, assign(socket, :sequence, sequence)} end)
+  end
+
+  def handle_event("note-length-shorten", _unsigned_params, %{assigns: assigns} = socket) do
+    case assigns.note_length do
+      :quarter -> update_note_length(socket, :eighth)
+      :eighth -> update_note_length(socket, :sixteenth)
+      :sixteenth -> update_note_length(socket, :thirty_second)
+      :thirty_second -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("note-length-increase", _unsigned_params, %{assigns: assigns} = socket) do
+    case assigns.note_length do
+      :quarter -> {:noreply, socket}
+      :eighth -> update_note_length(socket, :quarter)
+      :sixteenth -> update_note_length(socket, :eighth)
+      :thirty_second -> update_note_length(socket, :sixteenth)
+    end
+  end
+
+  defp update_note_length(socket, note_length) do
+    Sequencer.update_note_length(socket.assigns.sequencer, note_length, self())
+    {:noreply, assign(socket, :note_length, note_length)}
   end
 
   defp update_bpm(socket, bpm) do
