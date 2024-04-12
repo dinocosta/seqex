@@ -19,9 +19,16 @@ defmodule Seqex.Sequencer do
 
   @type sequence :: [MIDI.note() | [MIDI.note()]]
 
+  @type note_length :: :quarter | :eighth | :sixteenth | :thirty_second
+
   @typedoc """
   * `sequence` - List of notes, or chords, to be played in the sequence.
   * `bpm` - The sequencer's BPM.
+  * `note_length` - Lenght of each note in the sequence. Defaults to `:quarter` and can be any of the following values:
+    * `:quarter` - 1/4 of a beat.
+    * `:eighth` - 1/8 of a beat.
+    * `:sixteenth` - 1/16 of a beat.
+    * `:thirty_second` - 1/32 of a beat.
   """
   @type option :: {:sequence, sequence()} | {:bpm, non_neg_integer()} | {:connection, %Midiex.OutConn{}}
 
@@ -39,6 +46,7 @@ defmodule Seqex.Sequencer do
           sequence: sequence(),
           conn: %Midiex.OutConn{},
           bpm: non_neg_integer(),
+          note_length: note_length(),
           playing?: boolean(),
           notes_playing: [MIDI.note() | [MIDI.note()]],
           position: non_neg_integer()
@@ -46,9 +54,14 @@ defmodule Seqex.Sequencer do
 
   @minute_in_milliseconds 60_000
 
+  # Mapping between note length representation in atom and their decimal value, helpful when using it to calculate the
+  # interval between notes.
+  @note_lengths %{quarter: 1 / 4, eighth: 1 / 8, sixteenth: 1 / 16, thirty_second: 1 / 32}
+
   @default_initial_state %{
     sequence: [],
-    bpm: 120
+    bpm: 120,
+    note_length: :quarter
   }
 
   # -------------------------------------------------------------------------------------------------------------------
@@ -81,7 +94,7 @@ defmodule Seqex.Sequencer do
       end
 
     # Determines the interval between notes taking into consideration the sequencer's BPM.
-    interval = div(@minute_in_milliseconds, state.bpm)
+    interval = round(div(@minute_in_milliseconds, state.bpm) * (@note_lengths[state.note_length] * 4))
 
     MIDI.note_off(conn, state.notes_playing)
     MIDI.note_on(conn, current_notes)
@@ -142,6 +155,12 @@ defmodule Seqex.Sequencer do
     state
     |> Map.put(:sequence, sequence)
     |> Map.put(:position, position)
+    |> then(fn updated_state -> {:noreply, updated_state} end)
+  end
+
+  def handle_cast({:update_note_length, note_length}, state) do
+    state
+    |> Map.put(:note_length, note_length)
     |> then(fn updated_state -> {:noreply, updated_state} end)
   end
 
@@ -227,6 +246,20 @@ defmodule Seqex.Sequencer do
     case caller do
       nil -> PubSub.broadcast(Seqex.PubSub, topic(sequencer), {:sequence, sequence})
       pid -> PubSub.broadcast_from(Seqex.PubSub, pid, topic(sequencer), {:sequence, sequence})
+    end
+  end
+
+  @spec update_note_length(pid(), note_length(), caller :: pid() | nil) :: :ok | {:error, :invalid_note_length}
+  def update_note_length(sequencer, note_length, caller \\ nil) do
+    if note_length not in Map.keys(@note_lengths) do
+      {:error, :invalid_note_length}
+    else
+      GenServer.cast(sequencer, {:update_note_length, note_length})
+
+      case caller do
+        nil -> PubSub.broadcast(Seqex.PubSub, topic(sequencer), {:note_length, note_length})
+        pid -> PubSub.broadcast_from(Seqex.PubSub, pid, topic(sequencer), {:note_length, note_length})
+      end
     end
   end
 
