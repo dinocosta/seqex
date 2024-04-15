@@ -22,6 +22,7 @@ defmodule SeqexWeb.Router do
 
     scope "/playgrounds", Playgrounds do
       live "/notes-listener", NotesListener
+      live "/notes-listener-grid", NotesListenerGrid
     end
   end
 
