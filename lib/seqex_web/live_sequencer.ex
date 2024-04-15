@@ -34,7 +34,7 @@ defmodule SeqexWeb.LiveSequencer do
       </div>
 
       <div class="mb-8">
-        <%= for note <- [:C4, :D4, :E4, :F4, :G4, :A4, :B4] do %>
+        <%= for note <- [:C4, :D4, :E4, :F4, :G4, :A4, :B4, :C5] do %>
           <div class="flex justify-center space-x-1 md:space-x-2 mb-2 overflow-x-scroll">
             <%= for index <- 0..7 do %>
               <button
