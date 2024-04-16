@@ -7,19 +7,13 @@ defmodule SeqexWeb.Playgrounds.NotesListenerGrid do
 
   require Logger
 
-  @note_names ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-
   def render(assigns) do
     ~H"""
     <div class="bg-zinc-900 h-screen grid items-center justify-items-center">
-      <%= for octave <- 2..8  do %>
+      <%= for octave <-  0..7  do %>
         <div class="grid grid-rows-12 grid-flow-col">
-          <%= for note <- 0..11 do %>
-            <%= if Enum.find(@notes, fn <<value, _>> -> value == (note + (12 * octave)) end) do %>
-              <div class={"#{cell_color()} opacity-100 rounded-full h-24 w-24 cell"}></div>
-            <% else %>
-              <div class={"#{cell_color()} opacity-0 rounded-full h-24 w-24 cell"}></div>
-            <% end %>
+          <%= for note <- 1..12 do %>
+            <div class={"#{opacity(@notes, note + (12 * octave))} bg-orange rounded-full h-24 w-24 cell"}></div>
           <% end %>
         </div>
       <% end %>
@@ -49,40 +43,20 @@ defmodule SeqexWeb.Playgrounds.NotesListenerGrid do
     |> then(fn socket -> {:ok, socket} end)
   end
 
-  # MIDI message starts with 144 (1001XXXX) so this is a Note On event.
+  # MIDI message starts with 144 (10010000) so this is a Note On event on channel 1.
   # This means we'll remove this note from the list of notes.
-  def handle_cast({:midi_message, %Midiex.MidiMessage{data: [144, note, velocity]}}, socket) do
+  def handle_cast({:midi_message, %Midiex.MidiMessage{data: [144, _note, velocity]}}, socket) do
     socket
-    |> assign(notes: [<<note, velocity>> | socket.assigns.notes])
+    |> assign(notes: [<<:rand.uniform(72), velocity>> | socket.assigns.notes])
     |> then(fn socket -> {:noreply, socket} end)
   end
 
-  # MIDI message starts with 128 (1000XXXX) so this is a Note Off event.
+  # MIDI message starts with 128 (10000000) so this is a Note Off event on channel 1.
   # This means we'll remove this note from the list of notes.
-  def handle_cast({:midi_message, %Midiex.MidiMessage{data: [128, note, _velocity]}}, socket) do
+  def handle_cast({:midi_message, %Midiex.MidiMessage{data: [128, _note, _velocity]}}, socket) do
     socket.assigns.notes
-    |> Enum.reject(fn <<value, _velocity>> -> value == note end)
+    |> tl()
     |> then(fn notes -> {:noreply, assign(socket, notes: notes)} end)
-  end
-
-  # Given the note's value returns a `String.t()` with the note's name.
-  #
-  # ## Example
-  #
-  #   iex> NotesListener.note_name(60)
-  #   "C4"
-  #   iex> NotesListener.note_name(65)
-  #   "F4"
-  @spec note_name(integer()) :: String.t()
-  defp note_name(note) do
-    # Since we know that there's only 12 notes in an octave we can just divide the note's value by 12
-    # and subtract 1 (because C0 is note number 12, at least in this implementation), which will
-    # give us the octave of the note.
-    # We then take the remainder and determine the note's name from the @note_indexes list.
-    octave = div(note, 12) - 1
-    name = Enum.at(@note_names, rem(note, 12))
-
-    "#{name}#{octave}"
   end
 
   # Given a note's velocity, will return the hexadecimal code for the alpha channel
@@ -104,6 +78,10 @@ defmodule SeqexWeb.Playgrounds.NotesListenerGrid do
     |> then(fn value -> value - rem(value, 5) end)
   end
 
-  defp cell_color(),
-    do: Enum.random(["bg-red-400", "bg-blue-400", "bg-yellow-400", "bg-green-400"])
+  defp opacity(notes, cell_value) do
+    case Enum.find(notes, fn <<value, _>> -> value == cell_value end) do
+      nil -> "opacity-0"
+      <<_value, velocity>> -> "opacity-#{velocity_to_opacity(velocity)}"
+    end
+  end
 end
