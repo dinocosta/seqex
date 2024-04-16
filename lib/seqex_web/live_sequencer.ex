@@ -1,3 +1,7 @@
+# LaunchPad message that starts the OP-1 Field – 250
+# 1111 1010
+# Second time around it's 252
+# 1111 1100
 defmodule SeqexWeb.LiveSequencer do
   use SeqexWeb, :live_view
 
@@ -9,76 +13,6 @@ defmodule SeqexWeb.LiveSequencer do
 
   @default_bpm 120
   @default_sequence [[:C4], [], [:E4], [], [:G4], [], [:B4], []]
-
-  def render(assigns) do
-    ~H"""
-    <div class="bg-light-gray min-h-screen p-4">
-      <div class="text-3xl font-bold mb-8 w-10 h-10 md:w-14 md:h-14 bg-orange rounded-full" />
-
-      <div class="flex justify-center gap-1 md:gap-2 mb-2">
-        <%= for step <- 1..length(@sequence) do %>
-          <div class="w-10 md:w-14">
-            <p class="block font-mono"><%= step %></p>
-            <div class="flex">
-              <div
-                id={"step-#{step}"}
-                class={
-                  if step == @step,
-                    do: "grow m-auto h-2 rounded-full bg-orange",
-                    else: "grow m-auto h-2 rounded-full bg-white"
-                }
-              />
-            </div>
-          </div>
-        <% end %>
-      </div>
-
-      <div class="mb-8">
-        <%= for note <- [:C4, :D4, :E4, :F4, :G4, :A4, :B4, :C5] do %>
-          <div class="flex justify-center space-x-1 md:space-x-2 mb-2 overflow-x-scroll">
-            <%= for index <- 0..7 do %>
-              <button
-                phx-click="update-note"
-                phx-value-index={index}
-                phx-value-note={note}
-                class="w-10 h-10 md:w-14 md:h-14 rounded-md bg-dark-gray"
-              >
-                <div class={"ml-6 mb-4 md:ml-10 md:mb-6 w-2 h-2 rounded-full " <> background_color(index, note, @sequence)} />
-              </button>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
-
-      <div class="flex gap-1 md:gap-2 mb-4">
-        <div class="bg-orange text-white p-4 rounded-md" phx-click="play"><Icons.play /></div>
-        <div class="bg-gray text-white p-4 rounded-md" phx-click="stop"><Icons.pause /></div>
-      </div>
-
-      <div class="flex gap-1 md:gap-2 mb-4">
-        <.form for={@form} class="flex">
-          <input
-            type="text"
-            name="bpm"
-            default={@bpm}
-            phx-change="update-bpm"
-            phx-debounce="750"
-            value={@bpm}
-            class="rounded-md flex-grow"
-          />
-        </.form>
-        <div class="bg-gray text-white p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm - 1}><Icons.minus /></div>
-        <div class="bg-gray text-white p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm + 1}><Icons.plus /></div>
-      </div>
-
-      <div class="flex gap-1 md:gap-2 mb-4">
-        <p><%= @note_length %></p>
-        <div class="bg-orange text-white p-4 rounded-md font-mono" phx-click="note-length-shorten">x2</div>
-        <div class="bg-gray text-white p-4 rounded-md font-mono" phx-click="note-length-increase">:2</div>
-      </div>
-    </div>
-    """
-  end
 
   def mount(_params, _session, socket) do
     # When mounting, we'll first see if there's already a process with the `Seqex.Sequencer` name, if that's the case
@@ -121,8 +55,8 @@ defmodule SeqexWeb.LiveSequencer do
   # Handlers for `phx-click` events.
   def handle_event("update-bpm", %{"bpm" => bpm}, socket) do
     case Integer.parse(bpm) do
-      {bpm, ""} when bpm > 0 -> update_bpm(socket, bpm)
-      :error -> {:noreply, put_flash(socket, :error, "BPM must be an integer greater than 0.")}
+      {bpm, ""} when bpm >= 60 -> update_bpm(socket, bpm)
+      _ -> {:noreply, put_flash(socket, :error, "BPM must be an integer greater than or equal to 60.")}
     end
   end
 
