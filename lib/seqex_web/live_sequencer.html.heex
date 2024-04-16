@@ -19,53 +19,64 @@
     <% end %>
   </div>
 
-  <div class="mb-8">
-    <%= for note <- [:C4, :D4, :E4, :F4, :G4, :A4, :B4, :C5] do %>
-      <div class="flex justify-center space-x-1 md:space-x-2 mb-2 overflow-x-scroll">
-        <%= for index <- 0..7 do %>
-          <button
-            phx-click="update-note"
-            phx-value-index={index}
-            phx-value-note={note}
-            class="w-10 h-10 md:w-14 md:h-14 rounded-md bg-dark-gray"
-          >
-            <div class={"ml-6 mb-4 md:ml-10 md:mb-6 w-2 h-2 rounded-full " <> background_color(index, note, @sequence)} />
-          </button>
-        <% end %>
+  <div class="flex justify-center">
+    <div>
+      <%= for note <- [:C4, :D4, :E4, :F4, :G4, :A4, :B4, :C5] do %>
+        <div class="flex justify-center space-x-1 md:space-x-2 mb-2 overflow-x-scroll">
+          <%= for index <- 0..7 do %>
+            <button
+              phx-click="update-note"
+              phx-value-index={index}
+              phx-value-note={note}
+              class="w-10 h-10 md:w-14 md:h-14 rounded-md bg-dark-gray"
+            >
+              <div class={"ml-6 mb-4 md:ml-10 md:mb-6 w-2 h-2 rounded-full " <> background_color(index, note, @sequence)} />
+            </button>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="mb-8" />
+      <!-- Play and Pause Buttons -->
+      <div class="flex gap-1 md:gap-2 mb-1 md:mb-2">
+        <span class="grow" />
+        <div class="bg-orange text-white p-4 rounded-md" phx-click="play"><Icons.play /></div>
+        <div class="bg-gray text-white p-4 rounded-md" phx-click="stop"><Icons.pause /></div>
       </div>
-    <% end %>
-  </div>
-
-  <div class="flex gap-1 md:gap-2 mb-4">
-    <div class="bg-orange text-white p-4 rounded-md" phx-click="play"><Icons.play /></div>
-    <div class="bg-gray text-white p-4 rounded-md" phx-click="stop"><Icons.pause /></div>
-  </div>
-
-  <div class="flex gap-1 md:gap-2 mb-4">
-    <.form for={@form} class="flex">
-      <input
-        type="text"
-        name="bpm"
-        default={@bpm}
-        phx-change="update-bpm"
-        phx-debounce="750"
-        value={@bpm}
-        class="rounded-md flex-grow"
-      />
-    </.form>
-    <div
-      class="bg-gray text-white p-4 rounded-md"
-      phx-click="update-bpm"
-      phx-value-bpm={if @bpm == 60, do: 60, else: @bpm - 1}
-    >
-      <Icons.minus />
+      <!-- BPM Buttons -->
+      <div class="flex gap-1 md:gap-2 mb-1 md:mb-2">
+        <.form for={@form} class="flex grow">
+          <input
+            type="text"
+            name="bpm"
+            default={@bpm}
+            phx-change="update-bpm"
+            phx-debounce="750"
+            value={@bpm}
+            class="rounded-md grow"
+          />
+        </.form>
+        <div
+          class="bg-dark-gray text-white p-4 rounded-md"
+          phx-click="update-bpm"
+          phx-value-bpm={if @bpm == 60, do: 60, else: @bpm - 1}
+        >
+          <Icons.minus />
+        </div>
+        <div class="bg-dark-gray text-white p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm + 1}>
+          <Icons.plus />
+        </div>
+      </div>
+      <!-- Note Length -->
+      <div class="flex gap-1 md:gap-2 mb-4">
+        <p class="grow"><%= @note_length %></p>
+        <div class="bg-dark-gray text-white p-4 rounded-md font-mono" phx-click="note-length-increase">
+          <Icons.arrow_left />
+        </div>
+        <div class="bg-dark-gray text-white p-4 rounded-md font-mono" phx-click="note-length-shorten">
+          <Icons.arrow_right />
+        </div>
+      </div>
     </div>
-    <div class="bg-gray text-white p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm + 1}><Icons.plus /></div>
-  </div>
-
-  <div class="flex gap-1 md:gap-2 mb-4">
-    <p><%= @note_length %></p>
-    <div class="bg-orange text-white p-4 rounded-md font-mono" phx-click="note-length-shorten">x2</div>
-    <div class="bg-gray text-white p-4 rounded-md font-mono" phx-click="note-length-increase">:2</div>
   </div>
 </div>
