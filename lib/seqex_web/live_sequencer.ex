@@ -41,20 +41,19 @@ defmodule SeqexWeb.LiveSequencer do
     |> assign(:note_length, Sequencer.note_length(sequencer))
     |> assign(:step, Sequencer.step(sequencer) + 1)
     |> assign(:octave, 4)
-    |> assign(:topic, Sequencer.topic(sequencer))
-    |> tap(fn socket ->
+    |> tap(fn _socket ->
       # Subscribe to the topic related to the sequencer, so that we can both broadcast updates as well as receive
       # messages related to the changes in the sequencer's state.
-      PubSub.subscribe(Seqex.PubSub, socket.assigns.topic)
+      PubSub.subscribe(Seqex.PubSub, Sequencer.topic(sequencer))
     end)
     |> then(fn socket -> {:ok, socket} end)
   end
 
   # Handlers for the PubSub broadcast messages.
-  def handle_info({:bpm, bpm}, state), do: {:noreply, assign(state, :bpm, bpm)}
-  def handle_info({:sequence, sequence}, state), do: {:noreply, assign(state, :sequence, sequence)}
-  def handle_info({:step, step}, state), do: {:noreply, assign(state, :step, step + 1)}
-  def handle_info({:note_length, length}, state), do: {:noreply, assign(state, :note_length, length)}
+  def handle_info({:bpm, bpm}, socket), do: {:noreply, assign(socket, :bpm, bpm)}
+  def handle_info({:sequence, sequence}, socket), do: {:noreply, assign(socket, :sequence, sequence)}
+  def handle_info({:step, step}, socket), do: {:noreply, assign(socket, :step, step + 1)}
+  def handle_info({:note_length, length}, socket), do: {:noreply, assign(socket, :note_length, length)}
 
   # Handlers for `phx-click` events.
   def handle_event("update-bpm", %{"bpm" => bpm}, socket) do
