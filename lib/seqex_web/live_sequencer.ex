@@ -13,6 +13,8 @@ defmodule SeqexWeb.LiveSequencer do
 
   @default_bpm 120
   @default_sequence [[:C4], [], [:E4], [], [:G4], [], [:B4], []]
+  @max_octave_value 5
+  @min_octave_value 1
 
   def mount(_params, _session, socket) do
     # When mounting, we'll first see if there's already a process with the `Seqex.Sequencer` name, if that's the case
@@ -38,6 +40,7 @@ defmodule SeqexWeb.LiveSequencer do
     |> assign(:sequence, Sequencer.sequence(sequencer))
     |> assign(:note_length, Sequencer.note_length(sequencer))
     |> assign(:step, 1)
+    |> assign(:octave, 4)
     |> assign(:topic, Sequencer.topic(sequencer))
     |> tap(fn socket ->
       # Subscribe to the topic related to the sequencer, so that we can both broadcast updates as well as receive
@@ -115,6 +118,13 @@ defmodule SeqexWeb.LiveSequencer do
     end
   end
 
+  def handle_event("update-octave", %{"octave" => octave}, socket) do
+    octave
+    |> String.to_integer()
+    |> then(fn value -> value |> min(@max_octave_value) |> max(@min_octave_value) end)
+    |> then(fn value -> {:noreply, assign(socket, :octave, value)} end)
+  end
+
   defp update_note_length(socket, note_length) do
     Sequencer.update_note_length(socket.assigns.sequencer, note_length, self())
     {:noreply, assign(socket, :note_length, note_length)}
@@ -128,5 +138,14 @@ defmodule SeqexWeb.LiveSequencer do
   # Helper function to determine the background color of the button based on the note and the sequence.
   defp background_color(index, note, sequence) do
     if note in Enum.at(sequence, index), do: "bg-orange", else: "bg-white"
+  end
+
+  # Given the live view's octave, generates the list of notes to display on the pads.
+  # This could be done on the template, but readibility would be worse there, so we just do it here instead.
+  defp notes(octave) do
+    ["C", "D", "E", "F", "G", "A", "B"]
+    |> Enum.map(fn note -> note <> "#{octave}" end)
+    |> then(fn notes -> notes ++ ["C" <> "#{octave + 1}"] end)
+    |> Enum.map(&String.to_atom/1)
   end
 end
