@@ -148,4 +148,10 @@ defmodule SeqexWeb.LiveSequencer do
     |> then(fn notes -> notes ++ ["C" <> "#{octave + 1}"] end)
     |> Enum.map(&String.to_atom/1)
   end
+
+  # Given a note length atom representation, returns a string with the note length.
+  defp note_length_to_string(:quarter), do: "1/4"
+  defp note_length_to_string(:eighth), do: "1/8"
+  defp note_length_to_string(:sixteenth), do: "1/16"
+  defp note_length_to_string(:thirty_second), do: "1/32"
 end

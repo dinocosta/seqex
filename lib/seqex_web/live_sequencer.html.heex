@@ -10,8 +10,8 @@
             id={"step-#{step}"}
             class={
               if step == @step,
-                do: "grow m-auto h-2 rounded-full bg-orange",
-                else: "grow m-auto h-2 rounded-full bg-white"
+                do: "grow m-auto h-2 rounded-md bg-orange",
+                else: "grow m-auto h-2 rounded-md bg-white"
             }
           />
         </div>
@@ -59,7 +59,7 @@
             phx-change="update-bpm"
             phx-debounce="750"
             value={@bpm}
-            class="rounded-md grow"
+            class="rounded-md grow bg-dark-gray text-light-gray"
           />
         </.form>
         <div
@@ -75,7 +75,9 @@
       </div>
       <!-- Note Length -->
       <div class="flex gap-1 md:gap-2 mb-4">
-        <p class="grow"><%= @note_length %></p>
+        <div class="bg-dark-gray rounded-md border-2 pl-2 flex items-center border-dark-gray grow">
+          <p class="text-light-gray text-lg"><%= note_length_to_string(@note_length) %></p>
+        </div>
         <div class="bg-dark-gray text-white p-2 md:p-4 rounded-md font-mono" phx-click="note-length-increase">
           <Icons.arrow_left />
         </div>
