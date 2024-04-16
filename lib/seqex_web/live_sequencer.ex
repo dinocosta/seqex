@@ -39,7 +39,7 @@ defmodule SeqexWeb.LiveSequencer do
     |> assign(:form, %{"bpm" => @default_bpm})
     |> assign(:sequence, Sequencer.sequence(sequencer))
     |> assign(:note_length, Sequencer.note_length(sequencer))
-    |> assign(:step, 1)
+    |> assign(:step, Sequencer.step(sequencer) + 1)
     |> assign(:octave, 4)
     |> assign(:topic, Sequencer.topic(sequencer))
     |> tap(fn socket ->
@@ -53,7 +53,7 @@ defmodule SeqexWeb.LiveSequencer do
   # Handlers for the PubSub broadcast messages.
   def handle_info({:bpm, bpm}, state), do: {:noreply, assign(state, :bpm, bpm)}
   def handle_info({:sequence, sequence}, state), do: {:noreply, assign(state, :sequence, sequence)}
-  def handle_info({:step, step}, state), do: {:noreply, assign(state, :step, step)}
+  def handle_info({:step, step}, state), do: {:noreply, assign(state, :step, step + 1)}
 
   # Handlers for `phx-click` events.
   def handle_event("update-bpm", %{"bpm" => bpm}, socket) do

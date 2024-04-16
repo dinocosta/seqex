@@ -40,7 +40,7 @@ defmodule Seqex.Sequencer do
   * `playing?` - Whether the sequencer is currently playing or not.
   * `notes_playing` - Used to keep track of the notes that are currently being played, so that we can stop them when
     the sequencer starts playing the notes in the next sep, when the sequencer is stopped or the sequence is updated.
-  * `position` - The current position in the sequence.
+  * `step` - The current step in the sequence.
   """
   @type state :: %{
           sequence: sequence(),
@@ -49,7 +49,7 @@ defmodule Seqex.Sequencer do
           note_length: note_length(),
           playing?: boolean(),
           notes_playing: [MIDI.note() | [MIDI.note()]],
-          position: non_neg_integer()
+          step: non_neg_integer()
         }
 
   @minute_in_milliseconds 60_000
@@ -74,7 +74,7 @@ defmodule Seqex.Sequencer do
     state
     |> Map.put_new(:bpm, 120)
     |> Map.put(:playing?, false)
-    |> Map.put(:position, 0)
+    |> Map.put(:step, 0)
     |> Map.put(:notes_playing, [])
     |> then(fn state -> {:ok, state} end)
   end
@@ -82,15 +82,15 @@ defmodule Seqex.Sequencer do
   # Stops the previous note(s) in the sequence and plays the next one(s), scheduling another cast to the GenServer to
   # trigger the one(s) after.
   @impl true
-  def handle_info(:play, %{playing?: true, sequence: sequence, conn: conn, position: position} = state) do
+  def handle_info(:play, %{playing?: true, sequence: sequence, conn: conn, step: step} = state) do
     # TODO: Improve this to use that sweet sweet math I just seem to be able to remember right now :melt:
     # We're using the `|| []` bit to make sure we also support steps with empty notes (`nil`).
-    current_notes = List.flatten([Enum.at(sequence, position) || []])
+    current_notes = List.flatten([Enum.at(sequence, step) || []])
 
-    next_position =
-      case position == length(sequence) - 1 do
+    next_step =
+      case step == length(sequence) - 1 do
         true -> 0
-        false -> position + 1
+        false -> step + 1
       end
 
     # Determines the interval between notes taking into consideration the sequencer's BPM.
@@ -101,9 +101,9 @@ defmodule Seqex.Sequencer do
     Process.send_after(self(), :play, interval)
 
     # Broadcast any time the sequencer has moved to a different step, in case clients want to display the current step.
-    PubSub.broadcast(Seqex.PubSub, topic(self()), {:step, position + 1})
+    PubSub.broadcast(Seqex.PubSub, topic(self()), {:step, step})
 
-    {:noreply, Map.merge(state, %{position: next_position, notes_playing: current_notes})}
+    {:noreply, Map.merge(state, %{step: next_step, notes_playing: current_notes})}
   end
 
   # When `:playing?` is set to `false`, the message should be ignored, as it is likely it is being called after the
@@ -124,10 +124,13 @@ defmodule Seqex.Sequencer do
   # Returns the note length of the notes the sequencer is playing.
   def handle_call(:note_length, _from, state), do: {:reply, state.note_length, state}
 
+  # Returns the current step in the sequence.
+  def handle_call(:step, _from, state), do: {:reply, state.step, state}
+
   # Stops the sequencer. In order to make sure no note is left hanging this will send a `note_off` message to all of
   # the possible note values in the MIDI specification. This should probably be updated to actually save the current
-  # position in the GenServer's state, so that, when the sequencer is stopped we can just send the `note_off` message
-  # to the note in that position in the sequence.
+  # step in the GenServer's state, so that, when the sequencer is stopped we can just send the `note_off` message
+  # to the note in that step in the sequence.
   @impl true
   def handle_cast(:stop, %{conn: conn} = state) do
     0..127
@@ -143,21 +146,21 @@ defmodule Seqex.Sequencer do
 
   # Updating the `:sequence` in the sequencer's state also means both:
   #
-  # 1. Updating the `:position` to 0, in order to make sure that, if the new
+  # 1. Updating the `:step` to 0, in order to make sure that, if the new
   # sequence is smaller than the previous one, we don't get an exception by trying to access an
   # element out of bounds.
-  # 2. Stopping the last played note as we're resetting the position, so it's
+  # 2. Stopping the last played note as we're resetting the step, so it's
   # likely that the next time the `:play` message runs it won't stop the
   # previously played note, as the sequence of notes might have changed as well as
-  # the position has changed.
+  # the step has changed.
   def handle_cast({:update_sequence, sequence}, state) do
-    # If the current position is bigger than the number of elements in the new sequence, let's go back to 0,
-    # otherwise keep the current position so we avoid weirdly jumping back to the beginning of the sequence.
-    position = if state.position >= length(sequence), do: 0, else: state.position
+    # If the current step is bigger than the number of elements in the new sequence, let's go back to 0,
+    # otherwise keep the current step so we avoid weirdly jumping back to the beginning of the sequence.
+    step = if state.step >= length(sequence), do: 0, else: state.step
 
     state
     |> Map.put(:sequence, sequence)
-    |> Map.put(:position, position)
+    |> Map.put(:step, step)
     |> then(fn updated_state -> {:noreply, updated_state} end)
   end
 
@@ -283,6 +286,12 @@ defmodule Seqex.Sequencer do
   """
   @spec sequence(pid()) :: note_length()
   def note_length(sequencer), do: GenServer.call(sequencer, :note_length)
+
+  @doc """
+  Returns the sequencer's step in the sequence.
+  """
+  @spec step(pid()) :: non_neg_integer()
+  def step(sequencer), do: GenServer.call(sequencer, :step)
 
   @doc """
   Returns the PubSub topic the sequencer uses to broadcast update messages (updated bpm, updated sequence, etc.).
