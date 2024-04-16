@@ -9,8 +9,8 @@
           id={"step-#{step}"}
           class={
             if step == @step,
-              do: "grow m-auto h-2 rounded-md bg-orange",
-              else: "grow m-auto h-2 rounded-md bg-white"
+              do: "grow m-auto h-2 rounded-sm bg-orange",
+              else: "grow m-auto h-2 rounded-sm bg-white"
           }
         />
       </div>
@@ -24,7 +24,7 @@
         class="flex justify-center space-x-1 md:space-x-2 mb-2 overflow-x-scroll"
       >
         <button
-          :for={index <- 0..7}
+          :for={index <- 0..(length(@sequence) - 1)}
           phx-click="update-note"
           phx-value-index={index}
           phx-value-note={note}

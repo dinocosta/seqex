@@ -54,6 +54,7 @@ defmodule SeqexWeb.LiveSequencer do
   def handle_info({:bpm, bpm}, state), do: {:noreply, assign(state, :bpm, bpm)}
   def handle_info({:sequence, sequence}, state), do: {:noreply, assign(state, :sequence, sequence)}
   def handle_info({:step, step}, state), do: {:noreply, assign(state, :step, step + 1)}
+  def handle_info({:note_length, length}, state), do: {:noreply, assign(state, :note_length, length)}
 
   # Handlers for `phx-click` events.
   def handle_event("update-bpm", %{"bpm" => bpm}, socket) do
