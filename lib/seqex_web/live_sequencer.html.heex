@@ -2,39 +2,37 @@
   <div class="text-3xl font-bold mb-8 w-10 h-10 md:w-14 md:h-14 bg-orange rounded-full" />
 
   <div class="flex justify-center gap-1 md:gap-2 mb-2">
-    <%= for step <- 1..length(@sequence) do %>
-      <div class="w-10 md:w-14">
-        <p class="block font-mono"><%= step %></p>
-        <div class="flex">
-          <div
-            id={"step-#{step}"}
-            class={
-              if step == @step,
-                do: "grow m-auto h-2 rounded-md bg-orange",
-                else: "grow m-auto h-2 rounded-md bg-white"
-            }
-          />
-        </div>
+    <div :for={step <- 1..length(@sequence)} class="w-10 md:w-14">
+      <p class="block font-mono"><%= step %></p>
+      <div class="flex">
+        <div
+          id={"step-#{step}"}
+          class={
+            if step == @step,
+              do: "grow m-auto h-2 rounded-md bg-orange",
+              else: "grow m-auto h-2 rounded-md bg-white"
+          }
+        />
       </div>
-    <% end %>
+    </div>
   </div>
 
   <div class="flex justify-center">
     <div>
-      <%= for note <- Enum.reverse(notes(@octave)) do %>
-        <div class="flex justify-center space-x-1 md:space-x-2 mb-2 overflow-x-scroll">
-          <%= for index <- 0..7 do %>
-            <button
-              phx-click="update-note"
-              phx-value-index={index}
-              phx-value-note={note}
-              class="w-10 h-10 md:w-14 md:h-14 rounded-md bg-dark-gray"
-            >
-              <div class={"ml-6 mb-4 md:ml-10 md:mb-6 w-2 h-2 rounded-full " <> background_color(index, note, @sequence)} />
-            </button>
-          <% end %>
-        </div>
-      <% end %>
+      <div
+        :for={note <- Enum.reverse(notes(@octave))}
+        class="flex justify-center space-x-1 md:space-x-2 mb-2 overflow-x-scroll"
+      >
+        <button
+          :for={index <- 0..7}
+          phx-click="update-note"
+          phx-value-index={index}
+          phx-value-note={note}
+          class="w-10 h-10 md:w-14 md:h-14 rounded-md bg-dark-gray"
+        >
+          <div class={"ml-6 mb-4 md:ml-10 md:mb-6 w-2 h-2 rounded-full " <> background_color(index, note, @sequence)} />
+        </button>
+      </div>
 
       <div class="mb-8" />
       <!-- Octave, Play and Pause Buttons -->
