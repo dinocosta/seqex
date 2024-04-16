@@ -39,15 +39,15 @@
       <div class="mb-8" />
       <!-- Octave, Play and Pause Buttons -->
       <div class="flex gap-1 md:gap-2 mb-1 md:mb-2">
-        <div class="bg-gray text-white p-4 rounded-md" phx-click="update-octave" phx-value-octave={@octave + 1}>
+        <div class="bg-gray text-white p-2 md:p-4 rounded-md" phx-click="update-octave" phx-value-octave={@octave + 1}>
           <Icons.arrow_up />
         </div>
-        <div class="bg-gray text-white p-4 rounded-md" phx-click="update-octave" phx-value-octave={@octave - 1}>
+        <div class="bg-gray text-white p-2 md:p-4 rounded-md" phx-click="update-octave" phx-value-octave={@octave - 1}>
           <Icons.arrow_down />
         </div>
         <span class="grow" />
-        <div class="bg-orange text-white p-4 rounded-md" phx-click="play"><Icons.play /></div>
-        <div class="bg-gray text-white p-4 rounded-md" phx-click="stop"><Icons.pause /></div>
+        <div class="bg-orange text-white p-2 md:p-4 rounded-md" phx-click="play"><Icons.play /></div>
+        <div class="bg-gray text-white p-2 md:p-4 rounded-md" phx-click="stop"><Icons.pause /></div>
       </div>
       <!-- BPM Buttons -->
       <div class="flex gap-1 md:gap-2 mb-1 md:mb-2">
@@ -63,23 +63,23 @@
           />
         </.form>
         <div
-          class="bg-dark-gray text-white p-4 rounded-md"
+          class="bg-dark-gray text-white p-2 md:p-4 rounded-md"
           phx-click="update-bpm"
           phx-value-bpm={if @bpm == 60, do: 60, else: @bpm - 1}
         >
           <Icons.minus />
         </div>
-        <div class="bg-dark-gray text-white p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm + 1}>
+        <div class="bg-dark-gray text-white p-2 md:p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm + 1}>
           <Icons.plus />
         </div>
       </div>
       <!-- Note Length -->
       <div class="flex gap-1 md:gap-2 mb-4">
         <p class="grow"><%= @note_length %></p>
-        <div class="bg-dark-gray text-white p-4 rounded-md font-mono" phx-click="note-length-increase">
+        <div class="bg-dark-gray text-white p-2 md:p-4 rounded-md font-mono" phx-click="note-length-increase">
           <Icons.arrow_left />
         </div>
-        <div class="bg-dark-gray text-white p-4 rounded-md font-mono" phx-click="note-length-shorten">
+        <div class="bg-dark-gray text-white p-2 md:p-4 rounded-md font-mono" phx-click="note-length-shorten">
           <Icons.arrow_right />
         </div>
       </div>
