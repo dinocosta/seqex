@@ -37,15 +37,23 @@
       <div class="mb-8" />
       <!-- Octave, Play and Pause Buttons -->
       <div class="flex gap-1 md:gap-2 mb-1 md:mb-2">
-        <div class="bg-gray text-white p-2 md:p-4 rounded-md" phx-click="update-octave" phx-value-octave={@octave + 1}>
+        <button
+          class="bg-gray text-white p-2 md:p-4 rounded-md"
+          phx-click="update-octave"
+          phx-value-octave={@octave + 1}
+        >
           <Icons.arrow_up />
-        </div>
-        <div class="bg-gray text-white p-2 md:p-4 rounded-md" phx-click="update-octave" phx-value-octave={@octave - 1}>
+        </button>
+        <button
+          class="bg-gray text-white p-2 md:p-4 rounded-md"
+          phx-click="update-octave"
+          phx-value-octave={@octave - 1}
+        >
           <Icons.arrow_down />
-        </div>
+        </button>
         <span class="grow" />
-        <div class="bg-orange text-white p-2 md:p-4 rounded-md" phx-click="play"><Icons.play /></div>
-        <div class="bg-gray text-white p-2 md:p-4 rounded-md" phx-click="stop"><Icons.pause /></div>
+        <button class="bg-orange text-white p-2 md:p-4 rounded-md" phx-click="play"><Icons.play /></button>
+        <button class="bg-gray text-white p-2 md:p-4 rounded-md" phx-click="stop"><Icons.pause /></button>
       </div>
       <!-- BPM Buttons -->
       <div class="flex gap-1 md:gap-2 mb-1 md:mb-2">
@@ -60,28 +68,28 @@
             class="rounded-md grow bg-dark-gray text-light-gray"
           />
         </.form>
-        <div
+        <button
           class="bg-dark-gray text-white p-2 md:p-4 rounded-md"
           phx-click="update-bpm"
           phx-value-bpm={if @bpm == 60, do: 60, else: @bpm - 1}
         >
           <Icons.minus />
-        </div>
-        <div class="bg-dark-gray text-white p-2 md:p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm + 1}>
+        </button>
+        <button class="bg-dark-gray text-white p-2 md:p-4 rounded-md" phx-click="update-bpm" phx-value-bpm={@bpm + 1}>
           <Icons.plus />
-        </div>
+        </button>
       </div>
       <!-- Note Length -->
       <div class="flex gap-1 md:gap-2 mb-4">
         <div class="bg-dark-gray rounded-md border-2 pl-2 flex items-center border-dark-gray grow">
           <p class="text-light-gray text-lg"><%= note_length_to_string(@note_length) %></p>
         </div>
-        <div class="bg-dark-gray text-white p-2 md:p-4 rounded-md font-mono" phx-click="note-length-increase">
+        <button class="bg-dark-gray text-white p-2 md:p-4 rounded-md font-mono" phx-click="note-length-increase">
           <Icons.arrow_left />
-        </div>
-        <div class="bg-dark-gray text-white p-2 md:p-4 rounded-md font-mono" phx-click="note-length-shorten">
+        </button>
+        <button class="bg-dark-gray text-white p-2 md:p-4 rounded-md font-mono" phx-click="note-length-shorten">
           <Icons.arrow_right />
-        </div>
+        </button>
       </div>
     </div>
   </div>
