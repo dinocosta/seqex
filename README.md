@@ -1,37 +1,48 @@
-# Seqex
+# SeqEx
 
-To start your Phoenix server:
+SeqEx is a simple MIDI sequencer written in Elixir. It leverages [midiex](https://hex.pm/packages/midiex) as well
+as the [Phoenix LiveView](https://hex.pm/packages/phoenix_live_view) to create a sequencer you can use on the browser,
+as well as enable other poeple to control it.
 
-  * Run `mix setup` to install and setup dependencies
-  * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+- [Installation](#installation)
+- [Usage](#usage)
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+## Installation
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+1. Clone this project.
+2. Run `mix deps.get` on the repository's root.
+3. Run `mix phx.server` to start the server, you should now be able to access `http://localhost:4000` on your browser.
 
-## Learn more
+## Usage
 
-  * Official website: https://www.phoenixframework.org/
-  * Guides: https://hexdocs.pm/phoenix/overview.html
-  * Docs: https://hexdocs.pm/phoenix
-  * Forum: https://elixirforum.com/c/phoenix-forum
-  * Source: https://github.com/phoenixframework/phoenix
+### Sequencer
 
-## Listening To MIDI Messages
-
-[Midiex](https://github.com/haubie/midiex) allows MIDI messages to be processesd from input ports.
-You can use `Midiex.Listener` to do this, defining handler functions to process the messages:
+If you wish to use the sequencer, you can access it through the `Seqex.Sequencer` module, for example:
 
 ```elixir
-# 1. Define the input port you want to listen to.
-input_port = Enum.find(Midiex.ports(), fn port -> port.direction == :input end)
+alias Seqex.Sequencer
 
-# 2. Create a listener.
-{:ok, listener} = Midiex.Listener.start_link(input_port: input_port)
+sequence = [:C3, :E3, :G3, :E3]
+bpm = 120
 
-# 3. Define a handler function.
-Midiex.Listener.add_handler(listener, fn message -> IO.inspect(message) end)
+# 1. Fetch MIDI output port where we are sending messages to.
+[output_port] = :output |> Midiex.ports() |> List.first()
+
+# 2. Start sequencer's GenServer.
+{:ok, sequencer} = Sequencer.start_link(output_port, sequence: sequence, bpm: bpm)
+
+# 3. Play the sequencer.
+Sequencer.play(sequencer)
 ```
 
-As far as I can tell the handler can be any function so you could use the notes from the MIDI
-message to control anything you want to.
+Feel free to read the module's documentation, as well as the function's documentation to better understand its
+capabilities.
+
+### Live Views
+
+There's 3 live routes available in the project:
+
+- `/sequencer` – This is the UI for the sequencer, which allows you to set the sequence, tempo, note length, etc.
+- `/playground/notes-listener` – Simple app that listens to MIDI messages and displays the notes being played.
+- `/playground/notes-listener-grid` – Simple app that listens to MIDI messages and displays the notes being played as
+  dots in a grid.
