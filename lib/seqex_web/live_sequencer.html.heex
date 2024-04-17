@@ -19,10 +19,7 @@
 
   <div class="flex justify-center">
     <div>
-      <div
-        :for={note <- Enum.reverse(notes(@octave))}
-        class="flex justify-center space-x-1 md:space-x-2 mb-2 overflow-x-scroll"
-      >
+      <div :for={note <- Enum.reverse(notes(@octave))} class="flex justify-center space-x-1 md:space-x-2 mb-2">
         <button
           :for={index <- 0..(length(@sequence) - 1)}
           phx-click="update-note"
