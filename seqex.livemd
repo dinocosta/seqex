@@ -1,0 +1,98 @@
+# SeqEx
+
+## Midiex
+
+## Listener
+
+Adding listener to an input port and handling both Note On and Note Off messages.
+
+```elixir
+input_port = :input |> Midiex.ports() |> List.first()
+{:ok, listener} = Midiex.Listener.start_link(port: input_port)
+
+Midiex.Listener.add_handler(listener, fn
+  %{data: [status, note, velocity]} when status >= 144 and status <= 159 ->
+    IO.puts("Note On – #{note}, #{velocity}!")
+
+  %{data: [status, note, _velocity]} when status >= 128 and status <= 143 ->
+    IO.puts("Note Off – #{note}!")
+
+  message ->
+    IO.inspect(message)
+end)
+```
+
+Unsubscribe listener from input port in order to avoid spamming output.
+
+```elixir
+Midiex.Listener.unsubscribe(listener, input_port)
+```
+
+## Sending Messages
+
+Opening a connection to an output port.
+
+```elixir
+output_port = :output |> Midiex.ports() |> List.first()
+connection = Midiex.open(output_port)
+```
+
+Sending a Note On message, waiting 500ms and then sending a Note Off to the same note.
+
+```elixir
+Midiex.send_msg(connection, <<144, 60, 120>>)
+:timer.sleep(500)
+Midiex.send_msg(connection, <<128, 60, 0>>)
+```
+
+If you want to simulate pressing multiple notes you'll need to send multiple Note On messages, as MIDI doesn't support sending multiple notes in a Note On message.
+
+Do not forget to turn off all notes, otherwise you'll leave those notes hanging.
+
+```elixir
+notes = [60, 64, 67]
+
+Enum.each(notes, fn note -> Midiex.send_msg(connection, <<144, note, 120>>) end)
+:timer.sleep(1000)
+Enum.each(notes, fn note -> Midiex.send_msg(connection, <<128, note, 0>>) end)
+```
+
+## Sequencer
+
+You can start the Sequencer with `Seqex.Sequencer.start_link/1` or `Seqex.Sequencer.start_link/2` and providing the connection or output port.
+
+```elixir
+alias Seqex.Sequencer
+
+{:ok, sequencer} =
+  :output
+  |> Midiex.ports()
+  |> List.first()
+  |> Sequencer.start_link()
+```
+
+Let's update the sequencer's state by using `Seqex.Sequencer.update_bpm/2` and `Seqex.Sequencer.update_sequence/2`.
+
+```elixir
+Sequencer.update_bpm(sequencer, 150)
+Sequencer.update_sequence(sequencer, [:C3, :E3, :G3, :E3])
+```
+
+Play the sequencer with `Seqex.Sequencer.play/1` and you can pause it with `Seqex.Sequencer.stop/1`.
+
+```elixir
+Sequencer.play(sequencer)
+```
+
+```elixir
+Sequencer.stop(sequencer)
+```
+
+The sequencer also supports empty steps and multiple notes per step, so your sequence can be something like shown below.
+
+You also don't need to stop the sequencer before updating any of the fields, it automatically reacts to the state change.
+
+```elixir
+sequence = [:C3, nil, [:C3, :E3], nil, [:C3, :G3], nil, [:C3, :E3], nil]
+Sequencer.update_sequence(sequencer, sequence)
+```
