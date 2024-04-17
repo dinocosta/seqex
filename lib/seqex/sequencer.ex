@@ -294,6 +294,12 @@ defmodule Seqex.Sequencer do
   def step(sequencer), do: GenServer.call(sequencer, :step)
 
   @doc """
+  Returns whether the sequencer is playing or not.
+  """
+  @spec playing?(pid()) :: boolean()
+  def playing?(sequencer), do: GenServer.call(sequencer, :is_playing?)
+
+  @doc """
   Returns the PubSub topic the sequencer uses to broadcast update messages (updated bpm, updated sequence, etc.).
   """
   @spec topic(pid()) :: String.t()

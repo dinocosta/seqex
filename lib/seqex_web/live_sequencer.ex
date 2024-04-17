@@ -125,6 +125,18 @@ defmodule SeqexWeb.LiveSequencer do
     |> then(fn value -> {:noreply, assign(socket, :octave, value)} end)
   end
 
+  def handle_event("keydown", %{"key" => key}, socket) do
+    if key == " " do
+      if Sequencer.playing?(socket.assigns.sequencer) do
+        Sequencer.stop(socket.assigns.sequencer)
+      else
+        Sequencer.play(socket.assigns.sequencer)
+      end
+    end
+
+    {:noreply, socket}
+  end
+
   defp update_note_length(socket, note_length) do
     Sequencer.update_note_length(socket.assigns.sequencer, note_length, self())
     {:noreply, assign(socket, :note_length, note_length)}
