@@ -51,6 +51,30 @@ defmodule Seqex.MIDI do
   def note_off(conn, atom) when is_atom(atom), do: note_off(conn, atom_to_note(atom))
 
   @doc """
+  Sends a MIDI Start message (`<<0xFA>>`) to the provided output connection(s).
+  """
+  @spec start(%Midiex.OutConn{} | [%Midiex.OutConn{}]) :: %Midiex.OutConn{} | [%Midiex.OutConn{}]
+  def start(connection_or_connections), do: Midiex.send_msg(connection_or_connections, Midiex.Message.start())
+
+  @doc """
+  Sends a MIDI Continue message (`<<0xFB>>`) to the provided output connection(s).
+  """
+  @spec continue(%Midiex.OutConn{} | [%Midiex.OutConn{}]) :: %Midiex.OutConn{} | [%Midiex.OutConn{}]
+  def continue(connection_or_connections), do: Midiex.send_msg(connection_or_connections, <<0xFB>>)
+
+  @doc """
+  Sends a MIDI Stop message (`<<0xFC>>`) to the provided output connection(s).
+  """
+  @spec stop(%Midiex.OutConn{} | [%Midiex.OutConn{}]) :: %Midiex.OutConn{} | [%Midiex.OutConn{}]
+  def stop(connection_or_connections), do: Midiex.send_msg(connection_or_connections, Midiex.Message.stop())
+
+  @doc """
+  Sends a MIDI Clock message (`<<0xF8>>`) to the provided output connection(s).
+  """
+  @spec clock(%Midiex.OutConn{} | [%Midiex.OutConn{}]) :: %Midiex.OutConn{} | [%Midiex.OutConn{}]
+  def clock(connection_or_connections), do: Midiex.send_msg(connection_or_connections, Midiex.Message.clock())
+
+  @doc """
   Convers a note, as atom, to the integer representation of the note for use in MIDI messages.
 
   ## Examples
