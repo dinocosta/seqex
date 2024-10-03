@@ -26,6 +26,20 @@ defmodule Seqex.MIDI do
   # semitone.
   @accidental_increment %{"s" => 1, "b" => -1}
 
+  @doc """
+  Send a MIDI Note On message to the provided `connection` with provided note or list of notes.
+
+  A note can be provided as one of these three options:
+
+  1. A number, for example, `60` for Middle C
+  2. A string, for example, "C4" for Middle C
+  3. An atom, for example, :C4 for Middle C
+  4. As a tuple, where the first element is any of the above, and the second element is the note's velocity (0 to 127).
+
+  Be aware when using sharps and flats, as not all notes have both. For example, for the note `C` you can use `:Cs4`
+  but you can't use `:Cb4`, while for the note `G` you can use both sharps and flats, and for the note `B` you can
+  only use flats. Check the `Midiex.Message.note_on` function for more details.
+  """
   @spec note_on(%Midiex.OutConn{}, note() | [note()], velocity()) :: %Midiex.OutConn{}
   def note_on(conn, note_or_notes, velocity \\ 100)
 
@@ -36,9 +50,21 @@ defmodule Seqex.MIDI do
     end)
   end
 
-  def note_on(conn, note, velocity) when is_integer(note), do: Midiex.send_msg(conn, <<0x90, note, velocity>>)
-  def note_on(conn, atom, velocity) when is_atom(atom), do: note_on(conn, atom_to_note(atom), velocity)
+  def note_on(conn, note, velocity), do: Midiex.send_msg(conn, Midiex.Message.note_on(note, velocity))
 
+  @doc """
+  Send a MIDI Note Off message to the provided `connection` with provided note or list of notes.
+
+  A note can be provided as one of these three options:
+
+  1. A number, for example, `60` for Middle C
+  2. A string, for example, "C4" for Middle C
+  3. An atom, for example, :C4 for Middle C
+
+  Be aware when using sharps and flats, as not all notes have both. For example, for the note `C` you can use `:Cs4`
+  but you can't use `:Cb4`, while for the note `G` you can use both sharps and flats, and for the note `B` you can
+  only use flats. Check the `Midiex.Message.note_on` function for more details.
+  """
   @spec note_off(%Midiex.OutConn{}, note() | [note()]) :: %Midiex.OutConn{}
   def note_off(conn, notes) when is_list(notes) do
     Enum.each(notes, fn
@@ -47,8 +73,7 @@ defmodule Seqex.MIDI do
     end)
   end
 
-  def note_off(conn, note) when is_integer(note), do: Midiex.send_msg(conn, <<0x80, note, 0>>)
-  def note_off(conn, atom) when is_atom(atom), do: note_off(conn, atom_to_note(atom))
+  def note_off(conn, note), do: Midiex.send_msg(conn, Midiex.Message.note_off(note))
 
   @doc """
   Sends a MIDI Start message (`<<0xFA>>`) to the provided output connection(s).
