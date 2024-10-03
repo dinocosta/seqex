@@ -48,7 +48,8 @@ defmodule Seqex.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:plug_cowboy, "~> 2.5"},
-      {:midiex, "~> 0.6.1"}
+      {:midiex, "~> 0.6.1"},
+      {:micro_timer, "~> 0.1.1"}
     ]
   end
 

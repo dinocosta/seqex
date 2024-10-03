@@ -26,8 +26,11 @@ defmodule Seqex.Clock do
 
   alias Seqex.MIDI
 
+  @type subscriber :: pid() | %Midiex.OutConn{}
+  @type cast_message :: {:bpm, non_neg_integer()} | {:subscribe, subscriber()} | {:unsubcribe, subscriber()}
+
   @type state :: [
-          subscribers: [pid() | %Midiex.OutConn{}],
+          subscribers: [subscriber()],
           interval: non_neg_integer,
           bpm: non_neg_integer
         ]
@@ -38,7 +41,7 @@ defmodule Seqex.Clock do
   @impl true
   @spec init(Keyword.t()) :: {:ok, state()}
   def init(args) do
-    subscribers = Keyword.get(args, :subscribers)
+    subscribers = Keyword.get(args, :subscribers, [])
     bpm = Keyword.get(args, :bpm)
     interval = trunc(@minute_in_microseconds / (bpm * @pulses_per_quarter))
 
@@ -51,20 +54,21 @@ defmodule Seqex.Clock do
   @impl true
   @spec handle_info(:clock, state()) :: {:noreply, state()}
   def handle_info(:clock, state) do
+    # Schedule next clock pulse in order to try and reduce any impact caused by the time spent sending
+    # the MIDI Clock messages.
+    MicroTimer.send_after(state[:interval], :clock)
+
     # Send MIDI Clock message to all subscribers, be it output connections or other GenServers.
     Enum.each(state[:subscribers], fn
       %Midiex.OutConn{} = connection -> MIDI.clock(connection)
       pid when is_pid(pid) -> GenServer.cast(pid, Midiex.Message.clock())
     end)
 
-    # Schedule next clock pulse.
-    MicroTimer.send_after(state[:interval], :clock)
-
     {:noreply, state}
   end
 
   @impl true
-  @spec handle_cast({:bpm, non_neg_integer()}, state) :: {:noreply, state()}
+  @spec handle_cast(cast_message(), state) :: {:noreply, state()}
   def handle_cast({:bpm, bpm}, state) do
     # Update BPM and interval but do not schedule next clock pulse, the next scheduled clock will already
     # respect the new values.
@@ -73,9 +77,18 @@ defmodule Seqex.Clock do
     {:noreply, Keyword.merge(state, bpm: bpm, interval: interval)}
   end
 
+  def handle_cast({:subscribe, subscriber}, state),
+    do: {:noreply, Keyword.update!(state, :subscribers, fn subscribers -> [subscriber | subscribers] end)}
+
+  def handle_cast({:unsubscribe, subscriber}, state),
+    do: {:noreply, Keyword.update!(state, :subscribers, fn subscribers -> List.delete(subscribers, subscriber) end)}
+
   # ------
   # Client
   # ------
+
+  @spec start_link() :: {:ok, pid()}
+  def start_link, do: GenServer.start_link(__MODULE__, bpm: 120)
 
   @spec start_link(subscribers :: [pid() | %Midiex.OutConn{}], bpm :: non_neg_integer) :: {:ok, pid()}
   def start_link(subscribers, bpm \\ 120)
@@ -85,6 +98,21 @@ defmodule Seqex.Clock do
 
   def start_link(subscriber, bpm), do: start_link([subscriber], bpm)
 
-  @spec update_bpm(pid(), non_neg_integer()) :: :ok
+  @doc """
+  Updates the clock's BPM, effectively changing the interval between the MIDI Clock messages.
+  """
+  @spec update_bpm(clock :: pid(), bpm :: non_neg_integer()) :: :ok
   def update_bpm(clock, bpm), do: GenServer.cast(clock, {:bpm, bpm})
+
+  @doc """
+  Add another GenServer or MIDI Device to the list of subscribers for the provided `clock`.
+  """
+  @spec subscribe(clock :: pid(), subscriber :: subscriber()) :: :ok
+  def subscribe(clock, subscriber), do: GenServer.cast(clock, {:subscribe, subscriber})
+
+  @doc """
+  Remove GenServer or MIDI Device from the list of subscribers for the provided `clock`.
+  """
+  @spec unsubscribe(clock :: pid(), subscriber :: subscriber()) :: :ok
+  def unsubscribe(clock, subscriber), do: GenServer.cast(clock, {:unsubscribe, subscriber})
 end
