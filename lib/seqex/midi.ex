@@ -40,17 +40,18 @@ defmodule Seqex.MIDI do
   but you can't use `:Cb4`, while for the note `G` you can use both sharps and flats, and for the note `B` you can
   only use flats. Check the `Midiex.Message.note_on` function for more details.
   """
-  @spec note_on(%Midiex.OutConn{}, note() | [note()], velocity()) :: %Midiex.OutConn{}
-  def note_on(conn, note_or_notes, velocity \\ 100)
+  @spec note_on(%Midiex.OutConn{}, note() | [note()], velocity(), non_neg_integer()) :: %Midiex.OutConn{}
+  def note_on(conn, note_or_notes, velocity \\ 100, channel \\ 0)
 
-  def note_on(conn, notes, generic_velocity) when is_list(notes) do
+  def note_on(conn, notes, generic_velocity, channel) when is_list(notes) do
     Enum.each(notes, fn
-      {note, velocity} -> note_on(conn, note, velocity)
-      note -> note_on(conn, note, generic_velocity)
+      {note, velocity} -> note_on(conn, note, velocity, channel)
+      note -> note_on(conn, note, generic_velocity, channel)
     end)
   end
 
-  def note_on(conn, note, velocity), do: Midiex.send_msg(conn, Midiex.Message.note_on(note, velocity))
+  def note_on(conn, note, velocity, channel),
+    do: Midiex.send_msg(conn, Midiex.Message.note_on(note, velocity, channel: channel))
 
   @doc """
   Send a MIDI Note Off message to the provided `connection` with provided note or list of notes.
@@ -65,15 +66,24 @@ defmodule Seqex.MIDI do
   but you can't use `:Cb4`, while for the note `G` you can use both sharps and flats, and for the note `B` you can
   only use flats. Check the `Midiex.Message.note_on` function for more details.
   """
-  @spec note_off(%Midiex.OutConn{}, note() | [note()]) :: %Midiex.OutConn{}
-  def note_off(conn, notes) when is_list(notes) do
+  @spec note_off(%Midiex.OutConn{}, note() | [note()], non_neg_integer()) :: %Midiex.OutConn{}
+  def note_off(conn, notes, channel \\ 0)
+
+  def note_off(conn, notes, channel) when is_list(notes) do
     Enum.each(notes, fn
-      {note, _velocity} -> note_off(conn, note)
-      note -> note_off(conn, note)
+      {note, _velocity} -> note_off(conn, note, channel)
+      note -> note_off(conn, note, channel)
     end)
   end
 
-  def note_off(conn, note), do: Midiex.send_msg(conn, Midiex.Message.note_off(note))
+  def note_off(conn, note, channel), do: Midiex.send_msg(conn, Midiex.Message.note_off(note, 0, channel: channel))
+
+  @doc """
+  Sends a MIDI All Notes Off message to the provided connection.
+  This causes the receiving device to stop all notes that are playing.
+  """
+  @spec all_notes_off(%Midiex.OutConn{}) :: %Midiex.OutConn{}
+  def all_notes_off(connection), do: Midiex.send_msg(connection, Midiex.Message.all_notes_off())
 
   @doc """
   Sends a MIDI Start message (`<<0xFA>>`) to the provided output connection(s).
