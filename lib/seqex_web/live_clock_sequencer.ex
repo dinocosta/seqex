@@ -12,12 +12,15 @@ defmodule SeqexWeb.LiveClockSequencer do
   @max_octave_value 5
   @min_octave_value 1
 
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     # Check if a process with `Seqex.Clock` name is already running, that's the default clock source. If it is, provide
     # it as the clock source for the sequencer when starting, otherwise, start the clock.
-    clock = Process.whereis(Seqex.Clock) || elem(Seqex.Clock.start_link(), 1)
+    clock = Process.whereis(Seqex.Clock) || elem(Seqex.Clock.start_link(name: Seqex.Clock), 1)
+    channel = params |> Map.get("channel", "0") |> String.to_integer()
     [output_port | _] = Midiex.ports(:output)
-    {:ok, sequencer} = Seqex.ClockSequencer.start_link(output_port, clock: clock, sequence: @default_sequence)
+
+    {:ok, sequencer} =
+      Seqex.ClockSequencer.start_link(output_port, clock: clock, sequence: @default_sequence, channel: channel)
 
     socket
     |> assign(:sequencer, sequencer)
