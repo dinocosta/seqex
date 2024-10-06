@@ -30,6 +30,7 @@ defmodule SeqexWeb.LiveClockSequencer do
     |> assign(:note_length, ClockSequencer.note_length(sequencer))
     |> assign(:step, ClockSequencer.step(sequencer) + 1)
     |> assign(:octave, 4)
+    |> assign(:channel, 0)
     |> tap(fn _socket ->
       # Subscribe to the topic related to the sequencer, so that we can both broadcast updates as well as receive
       # messages related to the changes in the sequencer's state.
@@ -104,6 +105,28 @@ defmodule SeqexWeb.LiveClockSequencer do
       :eighth -> update_note_length(socket, :quarter)
       :sixteenth -> update_note_length(socket, :eighth)
       :thirty_second -> update_note_length(socket, :sixteenth)
+    end
+  end
+
+  def handle_event("channel-decrease", _unsigned_params, %{assigns: assigns} = socket) do
+    case assigns.channel do
+      0 ->
+        {:noreply, socket}
+
+      channel ->
+        ClockSequencer.update_channel(assigns.sequencer, channel - 1, self())
+        {:noreply, assign(socket, :channel, channel - 1)}
+    end
+  end
+
+  def handle_event("channel-increase", _unsigned_params, %{assigns: assigns} = socket) do
+    case assigns.channel do
+      15 ->
+        {:noreply, socket}
+
+      channel ->
+        ClockSequencer.update_channel(assigns.sequencer, channel + 1, self())
+        {:noreply, assign(socket, :channel, channel + 1)}
     end
   end
 

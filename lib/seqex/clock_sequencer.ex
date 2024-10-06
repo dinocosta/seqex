@@ -219,6 +219,9 @@ defmodule Seqex.ClockSequencer do
     {:noreply, Map.put(state, :clock, clock)}
   end
 
+  # Updates the MIDI channel the sequencer is sending messages to.
+  def handle_cast({:update_channel, channel}, state), do: {:noreply, Map.put(state, :channel, channel)}
+
   # If the sequencer is not playing, completely ignore the MIDI Clock message.
   def handle_cast(@clock_message, %{playing?: false} = state), do: {:noreply, state}
 
@@ -417,6 +420,25 @@ defmodule Seqex.ClockSequencer do
   """
   @spec update_clock(sequencer :: pid(), clock :: pid()) :: :ok
   def update_clock(sequencer, clock), do: GenServer.cast(sequencer, {:update_clock, clock})
+
+  @doc """
+  Updates the MIDI channel this sequencer is sending messages to.
+
+  The `caller` parameter can be used when the calling process is a subscriber of the sequencer and does not wish to
+  receive a message with the updated channel, as it was the one updating it.
+  """
+  @spec update_channel(sequencer :: pid(), channel :: non_neg_integer(), caller :: pid()) :: :ok
+  def update_channel(sequencer, channel, caller \\ nil)
+  def update_channel(_, channel, _) when channel > 15 or channel < 0, do: :ok
+
+  def update_channel(sequencer, channel, caller) do
+    GenServer.cast(sequencer, {:update_channel, channel})
+
+    case caller do
+      nil -> PubSub.broadcast(Seqex.PubSub, topic(sequencer), {:channel, channel})
+      pid -> PubSub.broadcast_from(Seqex.PubSub, pid, topic(sequencer), {:channel, channel})
+    end
+  end
 
   @doc """
   Returns the sequencer's BPM.
