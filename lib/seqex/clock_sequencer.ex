@@ -31,6 +31,7 @@ defmodule Seqex.ClockSequencer do
   * `connection` - The output MIDI connection to where the sequencer will send messages to.
   * `clock` - PID of the GenServer responsible for sending MIDI Clock messages to this sequencer. If not provided, the
     sequencer will start a new `Seqex.Clock` GenServer and use that for syncing.
+  * `channel`- The MIDI channel to send the MIDI messages to, from 0 to 15. Defaults to 0 (Channel 1).
   * `note_length` - Lenght of each note in the sequence. Defaults to `:quarter` and can be any of the following values:
     * `:quarter` - 1/4 of a beat.
     * `:eighth` - 1/8 of a beat.
@@ -38,7 +39,11 @@ defmodule Seqex.ClockSequencer do
     * `:thirty_second` - 1/32 of a beat.
   """
   @type option ::
-          {:sequence, sequence()} | {:bpm, non_neg_integer()} | {:connection, %Midiex.OutConn{}} | {:clock, pid()}
+          {:sequence, sequence()}
+          | {:bpm, non_neg_integer()}
+          | {:connection, %Midiex.OutConn{}}
+          | {:clock, pid()}
+          | {:channel, non_neg_integer()}
 
   @typedoc """
   * `sequence` - List of notes, or chords, to be played in the sequence.
@@ -49,6 +54,7 @@ defmodule Seqex.ClockSequencer do
   * `notes_playing` - Used to keep track of the notes that are currently being played, so that we can stop them when
     the sequencer starts playing the notes in the next sep, when the sequencer is stopped or the sequence is updated.
   * `step` - The current step in the sequence.
+  * `channel` - MIDI channel where the sequencer will send messages to.
   * `clock` - The PID of the GenServer that is responsible for sending MIDI Clock messages to this sequencer.
   * `clock_count` - Number of MIDI Clock messages the sequencer has received. Resets to 0 after every 24 messages, as
     we it is currently not used to determine the step in the sequence or song, but it could by simply dividing
@@ -62,6 +68,7 @@ defmodule Seqex.ClockSequencer do
           playing?: boolean(),
           notes_playing: [MIDI.note() | [MIDI.note()]],
           step: non_neg_integer(),
+          channel: non_neg_integer(),
           clock: pid(),
           clock_count: non_neg_integer()
         }
@@ -82,6 +89,7 @@ defmodule Seqex.ClockSequencer do
     sequence: [],
     bpm: 120,
     note_length: :quarter,
+    channel: 0,
     clock_count: 0
   }
 
@@ -97,6 +105,7 @@ defmodule Seqex.ClockSequencer do
 
     args
     |> Map.put_new(:bpm, 120)
+    |> Map.put_new(:channel, 0)
     |> Map.put(:playing?, false)
     |> Map.put(:step, 0)
     |> Map.put(:notes_playing, [])
@@ -121,8 +130,8 @@ defmodule Seqex.ClockSequencer do
     # Determines the interval between notes taking into consideration the sequencer's BPM.
     interval = round(div(@minute_in_milliseconds, state.bpm) * (@note_lengths[state.note_length] * 4))
 
-    MIDI.note_off(connection, state.notes_playing)
-    MIDI.note_on(connection, current_notes)
+    MIDI.note_off(connection, state.notes_playing, state.channel)
+    MIDI.note_on(connection, current_notes, state.channel)
     Process.send_after(self(), :play, interval)
 
     # Broadcast any time the sequencer has moved to a different step, in case clients want to display the current step.
@@ -209,7 +218,7 @@ defmodule Seqex.ClockSequencer do
     case state.clock_count do
       # First MIDI Clock message. Play the notes in this step and increment the count.
       0 ->
-        play(state.sequence, state.step, state.connection, state.notes_playing)
+        play(state.sequence, state.step, state.connection, state.notes_playing, state.channel)
         |> then(fn notes_playing -> Map.put(state, :notes_playing, notes_playing) end)
         |> Map.put(:clock_count, 1)
         |> then(fn state -> {:noreply, state} end)
@@ -263,16 +272,16 @@ defmodule Seqex.ClockSequencer do
     |> then(fn state -> {:noreply, state} end)
   end
 
-  @spec play(sequence(), non_neg_integer(), %Midiex.OutConn{}, [MIDI.note() | [MIDI.note()]]) :: [
+  @spec play(sequence(), non_neg_integer(), %Midiex.OutConn{}, [MIDI.note() | [MIDI.note()]], non_neg_integer()) :: [
           MIDI.note() | [MIDI.note()]
         ]
-  defp play(sequence, step, connection, notes_playing) do
+  defp play(sequence, step, connection, notes_playing, channel) do
     # TODO: Improve this to use that sweet sweet math I just seem to be able to remember right now :melt:
     # We're using the `|| []` bit to make sure we also support steps with empty notes (`nil`).
     current_notes = List.flatten([Enum.at(sequence, step) || []])
 
-    MIDI.note_off(connection, notes_playing)
-    MIDI.note_on(connection, current_notes)
+    MIDI.note_off(connection, notes_playing, channel)
+    MIDI.note_on(connection, current_notes, 100, channel)
 
     current_notes
   end
@@ -302,7 +311,6 @@ defmodule Seqex.ClockSequencer do
     state =
       options
       |> Enum.into(%{})
-      |> Map.take(Map.keys(@default_initial_state))
       |> Map.put(:connection, connection)
       |> then(fn options -> Map.merge(@default_initial_state, options) end)
 
@@ -418,6 +426,12 @@ defmodule Seqex.ClockSequencer do
   """
   @spec step(pid()) :: non_neg_integer()
   def step(sequencer), do: GenServer.call(sequencer, :step)
+
+  @doc """
+  Returns the PID for the GenServer that is sending MIDI Clock messages to this sequencer.
+  """
+  @spec clock(sequencer :: pid()) :: clock :: pid()
+  def clock(sequencer), do: GenServer.call(sequencer, :clock)
 
   @doc """
   Returns whether the sequencer is playing or not.
