@@ -28,13 +28,17 @@ defmodule Seqex.ClockSequencer do
   @typedoc """
   * `sequence` - List of notes, or chords, to be played in the sequence.
   * `bpm` - The sequencer's BPM.
+  * `connection` - The output MIDI connection to where the sequencer will send messages to.
+  * `clock` - PID of the GenServer responsible for sending MIDI Clock messages to this sequencer. If not provided, the
+    sequencer will start a new `Seqex.Clock` GenServer and use that for syncing.
   * `note_length` - Lenght of each note in the sequence. Defaults to `:quarter` and can be any of the following values:
     * `:quarter` - 1/4 of a beat.
     * `:eighth` - 1/8 of a beat.
     * `:sixteenth` - 1/16 of a beat.
     * `:thirty_second` - 1/32 of a beat.
   """
-  @type option :: {:sequence, sequence()} | {:bpm, non_neg_integer()} | {:connection, %Midiex.OutConn{}}
+  @type option ::
+          {:sequence, sequence()} | {:bpm, non_neg_integer()} | {:connection, %Midiex.OutConn{}} | {:clock, pid()}
 
   @typedoc """
   * `sequence` - List of notes, or chords, to be played in the sequence.
@@ -45,6 +49,10 @@ defmodule Seqex.ClockSequencer do
   * `notes_playing` - Used to keep track of the notes that are currently being played, so that we can stop them when
     the sequencer starts playing the notes in the next sep, when the sequencer is stopped or the sequence is updated.
   * `step` - The current step in the sequence.
+  * `clock` - The PID of the GenServer that is responsible for sending MIDI Clock messages to this sequencer.
+  * `clock_count` - Number of MIDI Clock messages the sequencer has received. Resets to 0 after every 24 messages, as
+    we it is currently not used to determine the step in the sequence or song, but it could by simply dividing
+    always incrementing this value and dividing it by 24 (PPQ).
   """
   @type state :: %{
           sequence: sequence(),
@@ -54,6 +62,7 @@ defmodule Seqex.ClockSequencer do
           playing?: boolean(),
           notes_playing: [MIDI.note() | [MIDI.note()]],
           step: non_neg_integer(),
+          clock: pid(),
           clock_count: non_neg_integer()
         }
 
@@ -81,13 +90,17 @@ defmodule Seqex.ClockSequencer do
   # -------------------------------------------------------------------------------------------------------------------
 
   @impl true
-  @spec init(state()) :: {:ok, state()}
-  def init(state) do
-    state
+  @spec init([option()]) :: {:ok, state()}
+  def init(args) do
+    clock = if is_map_key(args, :clock), do: args.clock, else: elem(Seqex.Clock.start_link(), 1)
+    GenServer.cast(clock, {:subscribe, self()})
+
+    args
     |> Map.put_new(:bpm, 120)
     |> Map.put(:playing?, false)
     |> Map.put(:step, 0)
     |> Map.put(:notes_playing, [])
+    |> Map.put(:clock, clock)
     |> then(fn state -> {:ok, state} end)
   end
 
@@ -139,6 +152,10 @@ defmodule Seqex.ClockSequencer do
   # Returns the current step in the sequence.
   def handle_call(:step, _from, state), do: {:reply, state.step, state}
 
+  # Returns the PID of the GenServer that is sending clock to this sequencer.
+  # Useful if you want to sync multiple sequencers to the same clock.
+  def handle_call(:clock, _from, state), do: {:reply, state.clock, state}
+
   # Toggles the `:playing?` boolean in the state, effectively stopping or starting the sequencer.
   def handle_cast(:toggle_playing, state),
     do: {:noreply, Map.put(state, :playing?, !state.playing?)}
@@ -171,6 +188,14 @@ defmodule Seqex.ClockSequencer do
     state
     |> Map.put(:note_length, note_length)
     |> then(fn updated_state -> {:noreply, updated_state} end)
+  end
+
+  # Updates the clock process that this sequencer is listening to by unsubscribing from the current clock
+  # and subscribing to the new one.
+  def handle_cast({:update_clock, clock}, state) do
+    GenServer.cast(state.clock, {:unsubscribe, self()})
+    GenServer.cast(clock, {:subscribe, self()})
+    {:noreply, Map.put(state, :clock, clock)}
   end
 
   # If the sequencer is not playing, completely ignore the MIDI Clock message.
@@ -363,6 +388,12 @@ defmodule Seqex.ClockSequencer do
       end
     end
   end
+
+  @doc """
+  Updates the clock that the sequencer will listen to for MIDI Clock messages.
+  """
+  @spec update_clock(sequencer :: pid(), clock :: pid()) :: :ok
+  def update_clock(sequencer, clock), do: GenServer.cast(sequencer, {:update_clock, clock})
 
   @doc """
   Returns the sequencer's BPM.
