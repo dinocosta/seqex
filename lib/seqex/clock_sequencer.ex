@@ -171,7 +171,19 @@ defmodule Seqex.ClockSequencer do
 
   def handle_cast(:play, state), do: {:noreply, Map.put(state, :playing?, true)}
 
-  def handle_cast({:update_bpm, bpm}, state), do: {:noreply, Map.put(state, :bpm, bpm)}
+  @doc """
+  Since the sequencer doesn't actually have its own BPM, as that depends on the clock that is sending it the MIDI Clock
+  messages, we'll simply cast this message to the GenServer that is sending the MIDI Clock to the sequencer.
+
+  Be aware that this might not always work, for example, if the MIDI Clock messages are actually being set by an
+  external device (OP-1, OP-Z, EP-133, etc.) instead of a single GenServer.
+  """
+  def handle_cast({:update_bpm, bpm}, state) do
+    state
+    |> Map.get(:clock)
+    |> GenServer.cast({:bpm, bpm})
+    |> then(fn _ -> {:noreply, state} end)
+  end
 
   # Updating the `:sequence` in the sequencer's state also means both:
   #
@@ -226,8 +238,11 @@ defmodule Seqex.ClockSequencer do
       # 23 MIDI Clock messages have been received, which means this is the last MIDI Clock message.
       # Move to the next step sot that, on the next MIDI Clock message, the sequencer plays again.
       23 ->
+        step = next_step(state.sequence, state.step)
+
         state
-        |> Map.put(:step, next_step(state.sequence, state.step))
+        |> Map.put(:step, step)
+        |> tap(fn _ -> PubSub.broadcast(Seqex.PubSub, topic(self()), {:step, step}) end)
         |> Map.put(:clock_count, 0)
         |> then(fn state -> {:noreply, state} end)
 
