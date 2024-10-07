@@ -35,6 +35,8 @@ defmodule Seqex.Clock do
           bpm: non_neg_integer
         ]
 
+  @type option :: {:bpm, non_neg_integer()} | {:subscribers, [subscriber()]} | {:name, String.t()}
+
   @pulses_per_quarter 24
   @minute_in_microseconds 60_000_000
 
@@ -87,11 +89,24 @@ defmodule Seqex.Clock do
   # Client
   # ------
 
+  @doc """
+  Creates a new MIDI Clock GenServer, with a default tempo of 120 BPM.
+  """
   @spec start_link() :: {:ok, pid()}
   def start_link, do: GenServer.start_link(__MODULE__, bpm: 120)
 
-  @spec start_link(subscribers :: [pid() | %Midiex.OutConn{}], bpm :: non_neg_integer) :: {:ok, pid()}
-  def start_link(subscribers, bpm \\ 120)
+  @doc """
+  Creates a new MIDI Clock GenServer with the provided options.
+  Check `option()` for a list of all the allowed options. The tempo will default to 120 BPM, if not provided.
+  """
+  @spec start_link(options :: [option()]) :: {:ok, pid()}
+  def start_link(options) do
+    opts = Keyword.take(options, [:name])
+
+    options
+    |> Keyword.put_new(:bpm, 120)
+    |> then(fn args -> GenServer.start_link(__MODULE__, args, opts) end)
+  end
 
   def start_link(subscribers, bpm) when is_list(subscribers),
     do: GenServer.start_link(__MODULE__, subscribers: subscribers, bpm: bpm)

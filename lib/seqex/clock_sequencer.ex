@@ -321,8 +321,8 @@ defmodule Seqex.ClockSequencer do
   @spec clock_interval(note_length()) :: non_neg_integer()
   defp clock_interval(:quarter), do: 24
   defp clock_interval(:eighth), do: 12
-  defp clock_interval(:sixteenth), do: 8
-  defp clock_interval(:thirty_second), do: 6
+  defp clock_interval(:sixteenth), do: 6
+  defp clock_interval(:thirty_second), do: 3
 
   # -------------------------------------------------------------------------------------------------------------------
   # Client Definition

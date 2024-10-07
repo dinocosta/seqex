@@ -13,36 +13,43 @@ defmodule SeqexWeb.LiveClockSequencer do
   @min_octave_value 1
 
   def mount(params, _session, socket) do
-    # We'll first check if the `clock` query parameter was provided and, if it was, we'll try to find the process
-    # with a name matching the provided value.
-    # If the query parameter is not available, we'll see if the `Seqex.Clock` process exists, and if it doesn't
-    # we'll start it in order to allow future sequencers to connect to it.
-    # P.S.: This code is a little bit cursed, I admit, but it's fine for the time being.
-    clock = if Map.get(params, "clock"), do: Process.whereis(String.to_atom(Map.get(params, "clock"))), else: nil
-    clock = if clock, do: clock, else: Process.whereis(Seqex.Clock)
-    clock = if clock, do: clock, else: elem(Seqex.Clock.start_link(name: Seqex.Clock), 1)
+    # The `mount/3` function is called twice by Phoenix, once to do the initial page load and again to establish a live
+    # socket. Since we only want to start the sequencer once, we'll see if the socket is already connected or not.
+    if connected?(socket) do
+      # We'll first check if the `clock` query parameter was provided and, if it was, we'll try to find the process
+      # with a name matching the provided value.
+      # If the query parameter is not available, we'll see if the `Seqex.Clock` process exists, and if it doesn't
+      # we'll start it in order to allow future sequencers to connect to it.
+      # P.S.: This code is a little bit cursed, I admit, but it's fine for the time being.
+      clock = if Map.get(params, "clock"), do: Process.whereis(String.to_atom(Map.get(params, "clock"))), else: nil
+      clock = if clock, do: clock, else: Process.whereis(Seqex.Clock)
+      clock = if clock, do: clock, else: elem(Seqex.Clock.start_link(name: Seqex.Clock), 1)
 
-    channel = params |> Map.get("channel", "0") |> String.to_integer()
-    [output_port | _] = Midiex.ports(:output)
+      channel = params |> Map.get("channel", "0") |> String.to_integer()
+      [output_port | _] = Midiex.ports(:output)
 
-    {:ok, sequencer} =
-      Seqex.ClockSequencer.start_link(output_port, clock: clock, sequence: @default_sequence, channel: channel)
+      {:ok, sequencer} =
+        Seqex.ClockSequencer.start_link(output_port, clock: clock, sequence: @default_sequence, channel: channel)
 
-    socket
-    |> assign(:sequencer, sequencer)
-    |> assign(:bpm, ClockSequencer.bpm(sequencer))
-    |> assign(:form, %{"bpm" => @default_bpm})
-    |> assign(:sequence, ClockSequencer.sequence(sequencer))
-    |> assign(:note_length, ClockSequencer.note_length(sequencer))
-    |> assign(:step, ClockSequencer.step(sequencer) + 1)
-    |> assign(:octave, 4)
-    |> assign(:channel, 0)
-    |> tap(fn _socket ->
-      # Subscribe to the topic related to the sequencer, so that we can both broadcast updates as well as receive
-      # messages related to the changes in the sequencer's state.
-      PubSub.subscribe(Seqex.PubSub, ClockSequencer.topic(sequencer))
-    end)
-    |> then(fn socket -> {:ok, socket} end)
+      socket
+      |> assign(:loading, false)
+      |> assign(:sequencer, sequencer)
+      |> assign(:bpm, ClockSequencer.bpm(sequencer))
+      |> assign(:form, %{"bpm" => @default_bpm})
+      |> assign(:sequence, ClockSequencer.sequence(sequencer))
+      |> assign(:note_length, ClockSequencer.note_length(sequencer))
+      |> assign(:step, ClockSequencer.step(sequencer) + 1)
+      |> assign(:octave, 4)
+      |> assign(:channel, 0)
+      |> tap(fn _socket ->
+        # Subscribe to the topic related to the sequencer, so that we can both broadcast updates as well as receive
+        # messages related to the changes in the sequencer's state.
+        PubSub.subscribe(Seqex.PubSub, ClockSequencer.topic(sequencer))
+      end)
+      |> then(fn socket -> {:ok, socket} end)
+    else
+      {:ok, assign(socket, :loading, true)}
+    end
   end
 
   # Handlers for the PubSub broadcast messages.

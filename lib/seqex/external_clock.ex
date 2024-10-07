@@ -23,6 +23,7 @@ defmodule Seqex.ExternalClock do
   @type subscriber :: pid() | %Midiex.OutConn{}
   @type cast_message :: {:subscribe, subscriber()} | {:unsubcribe, subscriber()}
   @type state :: [subscribers: [subscriber()]]
+  @type option :: {:name, String.t()} | {:subscribers, [subscriber()]}
 
   # Mapping between the message value sent by Midiex's Listener to the binary representation of that same message.
   @midi_messages %{
@@ -71,9 +72,13 @@ defmodule Seqex.ExternalClock do
   @spec start_link(input_port :: %Midiex.MidiPort{direction: :input}) :: {:ok, pid()}
   def start_link(input_port), do: GenServer.start_link(__MODULE__, input_port: input_port)
 
-  @spec start_link(input_port :: %Midiex.MidiPort{direction: :input}, subscribers :: [subscriber()]) :: {:ok, pid()}
-  def start_link(input_port, subscribers),
-    do: GenServer.start_link(__MODULE__, input_port: input_port, subscribers: subscribers)
+  @spec start_link(input_port :: %Midiex.MidiPort{direction: :input}, [option()]) :: {:ok, pid()}
+  def start_link(input_port, options) do
+    opts = Keyword.take(options, [:name])
+    subscribers = Keyword.get(options, :subscribers, [])
+
+    GenServer.start_link(__MODULE__, [input_port: input_port, subscribers: subscribers], opts)
+  end
 
   @doc """
   Add another GenServer or MIDI Device to the list of subscribers for the provided `clock`.
