@@ -56,9 +56,10 @@ defmodule Seqex.ClockSequencer do
   * `step` - The current step in the sequence.
   * `channel` - MIDI channel where the sequencer will send messages to.
   * `clock` - The PID of the GenServer that is responsible for sending MIDI Clock messages to this sequencer.
-  * `clock_count` - Number of MIDI Clock messages the sequencer has received. Resets to 0 after every 24 messages, as
-    we it is currently not used to determine the step in the sequence or song, but it could by simply dividing
-    always incrementing this value and dividing it by 24 (PPQ).
+  * `clock_count` - Number of MIDI Clock messages the sequencer has received since it has started playing.
+  * `clock_interval` - How many MIDI Clock messages the sequencer needs to be receive before playing a note. This
+    value is updated whenever the sequencer's note length is changed. For a length of a quarter note (1/4), this should
+    be the same as the resolution (24 PPQ), but for a length of eight (1/8), it should be half of that.
   """
   @type state :: %{
           sequence: sequence(),
@@ -106,6 +107,7 @@ defmodule Seqex.ClockSequencer do
     args
     |> Map.put_new(:bpm, 120)
     |> Map.put_new(:channel, 0)
+    |> Map.put(:clock_interval, clock_interval(args.note_length))
     |> Map.put(:playing?, false)
     |> Map.put(:step, 0)
     |> Map.put(:notes_playing, [])
@@ -208,6 +210,7 @@ defmodule Seqex.ClockSequencer do
   def handle_cast({:update_note_length, note_length}, state) do
     state
     |> Map.put(:note_length, note_length)
+    |> Map.put(:clock_interval, clock_interval(note_length))
     |> then(fn updated_state -> {:noreply, updated_state} end)
   end
 
@@ -230,28 +233,30 @@ defmodule Seqex.ClockSequencer do
   # Broadcast any time the sequencer has moved to a different step, in case clients want to display the current step.
   #    PubSub.broadcast(Seqex.PubSub, topic(self()), {:step, step})
   def handle_cast(@clock_message, state) do
-    case state.clock_count do
+    clock_count = state.clock_count + 1
+
+    case rem(clock_count, state.clock_interval) do
       # First MIDI Clock message. Play the notes in this step and increment the count.
-      0 ->
+      1 ->
         play(state.sequence, state.step, state.connection, state.notes_playing, state.channel)
         |> then(fn notes_playing -> Map.put(state, :notes_playing, notes_playing) end)
-        |> Map.put(:clock_count, 1)
+        |> Map.put(:clock_count, clock_count)
         |> then(fn state -> {:noreply, state} end)
 
-      # 23 MIDI Clock messages have been received, which means this is the last MIDI Clock message.
-      # Move to the next step sot that, on the next MIDI Clock message, the sequencer plays again.
-      23 ->
+      # A value of 0 means the sequencer has just received as many MIDI messages as it's `clock_interval` value,
+      # so we should jump to the next step.
+      0 ->
         step = next_step(state.sequence, state.step)
 
         state
         |> Map.put(:step, step)
         |> tap(fn _ -> PubSub.broadcast(Seqex.PubSub, topic(self()), {:step, step}) end)
-        |> Map.put(:clock_count, 0)
+        |> Map.put(:clock_count, clock_count)
         |> then(fn state -> {:noreply, state} end)
 
       # Simply increase clock count.
       _ ->
-        {:noreply, Map.update!(state, :clock_count, &(&1 + 1))}
+        {:noreply, Map.put(state, :clock_count, clock_count)}
     end
   end
 
@@ -312,6 +317,12 @@ defmodule Seqex.ClockSequencer do
       false -> step + 1
     end
   end
+
+  @spec clock_interval(note_length()) :: non_neg_integer()
+  defp clock_interval(:quarter), do: 24
+  defp clock_interval(:eighth), do: 12
+  defp clock_interval(:sixteenth), do: 8
+  defp clock_interval(:thirty_second), do: 6
 
   # -------------------------------------------------------------------------------------------------------------------
   # Client Definition
