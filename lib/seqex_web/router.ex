@@ -20,6 +20,7 @@ defmodule SeqexWeb.Router do
     get "/", PageController, :home
     live "/sequencer", LiveSequencer
     live "/clock_sequencer", LiveClockSequencer
+    live "/clock_sequencer_new", LiveClockSequencerNew
 
     scope "/playgrounds", Playgrounds do
       live "/notes-listener", NotesListener

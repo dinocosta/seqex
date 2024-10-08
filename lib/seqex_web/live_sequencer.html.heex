@@ -1,5 +1,5 @@
 <div class="bg-light-gray min-h-screen p-4" phx-window-keydown="keydown">
-  <div class="text-3xl font-bold mb-8 w-10 h-10 md:w-14 md:h-14 bg-orange rounded-full" />
+  <div class="text-3xl font-bold mb-8 w-10 h-10 md:w-14 md:h-14 bg-seqex-orange rounded-full" />
 
   <div class="flex justify-center gap-1 md:gap-2 mb-2">
     <div :for={step <- 1..length(@sequence)} class="w-10 md:w-14">
@@ -9,7 +9,7 @@
           id={"step-#{step}"}
           class={
             if step == @step,
-              do: "grow m-auto h-2 rounded-sm bg-orange",
+              do: "grow m-auto h-2 rounded-sm bg-seqex-orange",
               else: "grow m-auto h-2 rounded-sm bg-white"
           }
         />
@@ -35,22 +35,22 @@
       <!-- Octave, Play and Pause Buttons -->
       <div class="flex gap-1 md:gap-2 mb-1 md:mb-2">
         <button
-          class="bg-gray text-white p-2 md:p-4 rounded-md"
+          class="bg-seqex-gray text-white p-2 md:p-4 rounded-md"
           phx-click="update-octave"
           phx-value-octave={@octave + 1}
         >
           <Icons.arrow_up />
         </button>
         <button
-          class="bg-gray text-white p-2 md:p-4 rounded-md"
+          class="bg-seqex-gray text-white p-2 md:p-4 rounded-md"
           phx-click="update-octave"
           phx-value-octave={@octave - 1}
         >
           <Icons.arrow_down />
         </button>
         <span class="grow" />
-        <button class="bg-orange text-white p-2 md:p-4 rounded-md" phx-click="play"><Icons.play /></button>
-        <button class="bg-gray text-white p-2 md:p-4 rounded-md" phx-click="stop"><Icons.pause /></button>
+        <button class="bg-seqex-orange text-white p-2 md:p-4 rounded-md" phx-click="play"><Icons.play /></button>
+        <button class="bg-seqex-gray text-white p-2 md:p-4 rounded-md" phx-click="stop"><Icons.pause /></button>
       </div>
       <!-- BPM Buttons -->
       <div class="flex gap-1 md:gap-2 mb-1 md:mb-2">
