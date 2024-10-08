@@ -4,9 +4,7 @@
 <%= if @loading do %>
   <p>Loading...</p>
 <% else %>
-  <div class="bg-neutral-900 min-h-screen p-4" phx-window-keydown="keydown" style="font-family: Geist">
-    <div class="text-3xl font-bold mb-8 w-10 h-10 md:w-14 md:h-14 bg-orange rounded-full" />
-
+  <div class="bg-neutral-900 min-h-screen p-4 content-center" phx-window-keydown="keydown" style="font-family: Geist">
     <div class="flex justify-center gap-1 md:gap-2 mb-2 font-bold">
       <div :for={step <- 1..length(@sequence)} class="w-10 md:w-14 lg:w-20">
         <div class="flex">
