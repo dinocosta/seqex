@@ -22,7 +22,7 @@ defmodule Seqex.ExternalClock do
 
   @type subscriber :: pid() | %Midiex.OutConn{}
   @type cast_message :: {:subscribe, subscriber()} | {:unsubcribe, subscriber()}
-  @type state :: [subscribers: [subscriber()]]
+  @type state :: [subscribers: [subscriber()], debug: boolean()]
   @type option :: {:name, String.t()} | {:subscribers, [subscriber()]}
 
   # Mapping between the message value sent by Midiex's Listener to the binary representation of that same message.
@@ -42,11 +42,13 @@ defmodule Seqex.ExternalClock do
     # Subscribe to all incoming MIDI messages from the MIDI Input Port.
     Midiex.subscribe(input_port)
 
-    {:ok, [subscribers: subscribers]}
+    {:ok, [subscribers: subscribers, debug: false]}
   end
 
   @impl true
   def handle_info(%Midiex.MidiMessage{data: [data]}, state) when is_map_key(@midi_messages, data) do
+    if state[:debug], do: Logger.debug(inspect(data), module: __MODULE__)
+
     Enum.each(state[:subscribers], fn
       %Midiex.OutConn{} = connection -> Midiex.send_msg(connection, @midi_messages[data])
       pid when is_pid(pid) -> GenServer.cast(pid, @midi_messages[data])
@@ -64,6 +66,9 @@ defmodule Seqex.ExternalClock do
 
   def handle_cast({:unsubscribe, subscriber}, state),
     do: {:noreply, Keyword.update!(state, :subscribers, fn subscribers -> List.delete(subscribers, subscriber) end)}
+
+  def handle_cast(:toggle_debug, state),
+    do: {:noreply, Map.put(state, :debug, !state.debug)}
 
   # ------
   # Client
@@ -91,4 +96,11 @@ defmodule Seqex.ExternalClock do
   """
   @spec unsubscribe(clock :: pid(), subscriber :: subscriber()) :: :ok
   def unsubscribe(clock, subscriber), do: GenServer.cast(clock, {:unsubscribe, subscriber})
+
+  @doc """
+  Toggles the debug option, which will make it so that the GenServer will log every message it is getting from the
+  external device.
+  """
+  @spec toggle_debug(clock :: pid()) :: :ok
+  def toggle_debug(clock), do: GenServer.cast(clock, :toggle_debug)
 end
