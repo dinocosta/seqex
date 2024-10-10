@@ -26,7 +26,11 @@ defmodule SeqexWeb.LiveClockSequencerNew do
       clock = if clock, do: clock, else: elem(Seqex.Clock.start_link(name: Seqex.Clock), 1)
 
       channel = params |> Map.get("channel", "0") |> String.to_integer()
-      [output_port | _] = Midiex.ports(:output)
+
+      output_port =
+        if Map.get(params, "output"),
+          do: List.first(Midiex.ports(Map.get(params, "output"), :output)),
+          else: List.first(Midiex.ports(:output))
 
       {:ok, sequencer} =
         Seqex.ClockSequencer.start_link(output_port, clock: clock, sequence: @default_sequence, channel: channel)
