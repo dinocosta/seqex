@@ -39,11 +39,17 @@
         <!-- Octave, Play and Pause Buttons -->
         <div class="grid grid-cols-8 gap-1 md:gap-2">
           <div
-            class="col-span-6 bg-neutral-950 rounded-md p-4 text-white text-xl flex items-center h-10 md:h-14 lg:h-20"
+            class="col-span-5 bg-neutral-950 rounded-md p-4 text-white text-xl flex items-center h-10 md:h-14 lg:h-20"
             style="font-family: Geist Mono"
           >
             <%= @display %>
           </div>
+          <button
+            class="flex items-center justify-center text-white p-2 md:p-4 rounded-md bg-neutral-700"
+            phx-click="info"
+          >
+            <Icons.question_mark_circle />
+          </button>
           <button
             class={
               pad_color(@channel, true) <>

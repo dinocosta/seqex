@@ -216,6 +216,14 @@ defmodule SeqexWeb.LiveClockSequencerNew do
     |> then(fn socket -> {:noreply, socket} end)
   end
 
+  def handle_event("info", _unsigned_params, socket) do
+    pid = inspect(socket.assigns.sequencer)
+
+    socket
+    |> assign(:display, String.replace(pid, ~r/[#<>]/, " "))
+    |> then(fn socket -> {:noreply, socket} end)
+  end
+
   def handle_event("keydown", %{"key" => key}, socket) do
     if key == " " do
       if ClockSequencer.playing?(socket.assigns.sequencer) do
