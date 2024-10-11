@@ -6,11 +6,53 @@ defmodule SeqexWeb.LiveClockSequencerNew do
   alias Phoenix.PubSub
   alias Seqex.ClockSequencer
   alias SeqexWeb.Components.Icons
+  alias Seqex.MIDI
 
   @default_bpm 120
   @default_sequence [[:C4], [], [:E4], [], [:G4], [], [:B4], []]
   @max_octave_value 5
   @min_octave_value 1
+
+  # List of colors for the active pads, with the index in the list determining the MIDI channel it is associated with.
+  @active_colors [
+    "bg-orange-500 bg-opacity-85",
+    "bg-red-500 bg-opacity-85",
+    "bg-yellow-500 bg-opacity-85",
+    "bg-green-500 bg-opacity-85",
+    "bg-blue-500 bg-opacity-85",
+    "bg-indigo-500 bg-opacity-85",
+    "bg-purple-500 bg-opacity-85",
+    "bg-pink-500 bg-opacity-85",
+    "bg-teal-500 bg-opacity-85",
+    "bg-cyan-500 bg-opacity-85",
+    "bg-lime-500 bg-opacity-85",
+    "bg-emerald-500 bg-opacity-85",
+    "bg-sky-500 bg-opacity-85",
+    "bg-violet-500 bg-opacity-85",
+    "bg-fuchsia-500 bg-opacity-85",
+    "bg-rose-500 bg-opacity-85"
+  ]
+
+  # List of colors for the inactive pads, with the index in the list determining the MIDI channel it is associated
+  # with.
+  @inactive_colors [
+    "bg-opacity-30 bg-orange-200",
+    "bg-opacity-30 bg-red-200",
+    "bg-opacity-30 bg-yellow-200",
+    "bg-opacity-30 bg-green-200",
+    "bg-opacity-30 bg-blue-200",
+    "bg-opacity-30 bg-indigo-200",
+    "bg-opacity-30 bg-purple-200",
+    "bg-opacity-30 bg-pink-200",
+    "bg-opacity-30 bg-teal-200",
+    "bg-opacity-30 bg-cyan-200",
+    "bg-opacity-30 bg-lime-200",
+    "bg-opacity-30 bg-emerald-200",
+    "bg-opacity-30 bg-sky-200",
+    "bg-opacity-30 bg-violet-200",
+    "bg-opacity-30 bg-fuchsia-200",
+    "bg-opacity-30 bg-rose-200"
+  ]
 
   def mount(params, _session, socket) do
     # The `mount/3` function is called twice by Phoenix, once to do the initial page load and again to establish a live
@@ -204,11 +246,6 @@ defmodule SeqexWeb.LiveClockSequencerNew do
     |> then(fn socket -> {:noreply, socket} end)
   end
 
-  # Helper function to determine the background color of the button based on the note and the sequence.
-  defp background_color(index, note, sequence) do
-    if note in Enum.at(sequence, index), do: "bg-orange-500 bg-opacity-85", else: "bg-opacity-30 bg-orange-200"
-  end
-
   # Given the live view's octave, generates the list of notes to display on the pads.
   # This could be done on the template, but readibility would be worse there, so we just do it here instead.
   defp notes(octave) do
@@ -223,4 +260,14 @@ defmodule SeqexWeb.LiveClockSequencerNew do
   defp note_length_to_string(:eighth), do: "1/8"
   defp note_length_to_string(:sixteenth), do: "1/16"
   defp note_length_to_string(:thirty_second), do: "1/32"
+
+  # Determines the background color to show for a given pad, depending on the sequencer's channel as well as whether
+  # the pad is active or not.
+  @spec pad_color(channel :: MIDI.channel(), active :: boolean()) :: String.t()
+  defp pad_color(channel, true), do: Enum.at(@active_colors, channel)
+  defp pad_color(channel, false), do: Enum.at(@inactive_colors, channel)
+
+  # Determines whether the provided pad is active or not by figuring out if the pad's note is present in the sequence
+  # for the provided index.
+  defp pad_active?(index, note, sequence), do: note in Enum.at(sequence, index)
 end

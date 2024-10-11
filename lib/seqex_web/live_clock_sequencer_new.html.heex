@@ -28,7 +28,10 @@
             phx-click="update-note"
             phx-value-index={index}
             phx-value-note={note}
-            class={"w-10 h-10 md:w-14 md:h-14 lg:w-20 lg:h-20 rounded-md " <> background_color(index, note, @sequence)}
+            class={
+              "w-10 h-10 md:w-14 md:h-14 lg:w-20 lg:h-20 rounded-md "
+              <> pad_color(@channel, pad_active?(index, note, @sequence))
+            }
           />
         </div>
 
@@ -42,7 +45,10 @@
             <%= @display %>
           </div>
           <button
-            class="flex items-center justify-center bg-orange-500 text-white p-2 md:p-4 rounded-md"
+            class={
+              pad_color(@channel, true) <>
+              " flex items-center justify-center text-white p-2 md:p-4 rounded-md opacity-100"
+            }
             phx-click="play"
           >
             <Icons.play />
