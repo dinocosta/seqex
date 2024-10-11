@@ -167,6 +167,8 @@ defmodule Seqex.ClockSequencer do
   # Useful if you want to sync multiple sequencers to the same clock.
   def handle_call(:clock, _from, state), do: {:reply, state.clock, state}
 
+  def handle_call(:channel, _from, state), do: {:reply, state.channel, state}
+
   # Toggles the `:playing?` boolean in the state, effectively stopping or starting the sequencer.
   def handle_cast(:toggle_playing, state),
     do: {:noreply, Map.put(state, :playing?, !state.playing?)}
@@ -480,6 +482,12 @@ defmodule Seqex.ClockSequencer do
   """
   @spec clock(sequencer :: pid()) :: clock :: pid()
   def clock(sequencer), do: GenServer.call(sequencer, :clock)
+
+  @doc """
+  Returns the current channel the sequencer is sending messages to.
+  """
+  @spec channel(sequencer :: pid()) :: non_neg_integer()
+  def channel(sequencer), do: GenServer.call(sequencer, :channel)
 
   @doc """
   Returns whether the sequencer is playing or not.

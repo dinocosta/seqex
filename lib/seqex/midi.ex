@@ -14,6 +14,14 @@ defmodule Seqex.MIDI do
   """
   @type note :: 0..127 | {0..127, velocity()}
 
+  @typedoc """
+  A MIDI channel is used to determine where some MIDI messages are destined for, as well as for determining which
+  messages to listent to.
+  Devices can be configured to only expect/answer to messages in a given MIDI channel, as well to only send MIDI
+  messages in a given channel.
+  """
+  @type channel :: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15
+
   # Base note for which to perform the calculation when transforming atom to integer.
   # This is the C4 note, so we know we should compare the atom's note scale to 4.
   @base_note 60
