@@ -18,9 +18,10 @@ defmodule SeqexWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
-    live "/sequencer", LiveSequencer
+    live "/live_sequencer", LiveSequencer
     live "/clock_sequencer", LiveClockSequencer
-    live "/clock_sequencer_new", LiveClockSequencerNew
+    live "/sequencer", LiveClockSequencerNew
+    live "/client/:pid", Client
 
     scope "/playgrounds", Playgrounds do
       live "/notes-listener", NotesListener

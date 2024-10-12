@@ -77,6 +77,11 @@ defmodule SeqexWeb.LiveClockSequencerNew do
       {:ok, sequencer} =
         Seqex.ClockSequencer.start_link(output_port, clock: clock, sequence: @default_sequence, channel: channel)
 
+      # Generate Base64 encoding of the QR Code for the client, by leveraging the sequencer's PID.
+      # P.S.: There's surely a better way to do this, but for the sake of time, I'm doing it like this!
+      ["", "", "", "", "", pid, ""] = String.split(inspect(self()), ~r/[#PID<>]/)
+      qr_code = "http://seqex.ngrok.app/client/#{pid}" |> EQRCode.encode() |> EQRCode.png() |> Base.encode64()
+
       socket
       |> assign(:loading, false)
       |> assign(:sequencer, sequencer)
@@ -88,6 +93,7 @@ defmodule SeqexWeb.LiveClockSequencerNew do
       |> assign(:octave, 4)
       |> assign(:channel, 0)
       |> assign(:display, "SeqEx")
+      |> assign(:qr_code, qr_code)
       |> tap(fn _socket ->
         # Subscribe to the topic related to the sequencer, so that we can both broadcast updates as well as receive
         # messages related to the changes in the sequencer's state.
