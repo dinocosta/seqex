@@ -79,7 +79,7 @@ defmodule SeqexWeb.LiveClockSequencerNew do
 
       # Generate Base64 encoding of the QR Code for the client, by leveraging the sequencer's PID.
       # P.S.: There's surely a better way to do this, but for the sake of time, I'm doing it like this!
-      ["", "", "", "", "", pid, ""] = String.split(inspect(self()), ~r/[#PID<>]/)
+      ["", "", "", "", "", pid, ""] = String.split(inspect(sequencer), ~r/[#PID<>]/)
       qr_code = "http://seqex.ngrok.app/client/#{pid}" |> EQRCode.encode() |> EQRCode.png() |> Base.encode64()
 
       socket
@@ -111,9 +111,9 @@ defmodule SeqexWeb.LiveClockSequencerNew do
   def handle_info({:sequence, sequence}, socket), do: {:noreply, assign(socket, :sequence, sequence)}
   def handle_info({:step, step}, socket), do: {:noreply, assign(socket, :step, step + 1)}
   def handle_info({:note_length, length}, socket), do: {:noreply, assign(socket, :note_length, length)}
-  def handle_info(:start, socket), do: {:noreply, assign(socket, :playing?, true)}
+  def handle_info(:start, socket), do: {:noreply, socket |> assign(:playing?, true) |> assign(:step, 1)}
   def handle_info(:continue, socket), do: {:noreply, assign(socket, :playing?, true)}
-  def handle_info(:stop, socket), do: {:noreply, socket |> assign(:playing?, false) |> assign(:step, 1)}
+  def handle_info(:stop, socket), do: {:noreply, socket |> assign(:playing?, false)}
 
   # Handlers for `phx-click` events.
   def handle_event("update-bpm", %{"bpm" => bpm}, socket) do
@@ -124,8 +124,8 @@ defmodule SeqexWeb.LiveClockSequencerNew do
   end
 
   def handle_event("play", _unsigned_params, socket) do
-    ClockSequencer.play(socket.assigns.sequencer)
-    {:noreply, assign(socket, :display, "PLAY")}
+    ClockSequencer.start(socket.assigns.sequencer)
+    {:noreply, assign(socket, :display, "START")}
   end
 
   def handle_event("stop", _unsigned_params, socket) do

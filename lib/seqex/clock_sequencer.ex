@@ -285,11 +285,10 @@ defmodule Seqex.ClockSequencer do
   # step in the GenServer's state, so that, when the sequencer is stopped we can just send the `note_off` message
   # to the note in that step in the sequence.
   @impl true
-  def handle_cast(@stop_message, %{connection: connection, playing?: true} = state) do
-    0..127
-    |> Enum.each(fn note -> MIDI.note_off(connection, note) end)
-    |> tap(fn _ -> PubSub.broadcast(Seqex.PubSub, topic(self()), :stop) end)
-    |> then(fn _ -> {:noreply, Map.put(state, :playing?, false)} end)
+  def handle_cast(@stop_message, %{connection: connection, playing?: true, channel: channel} = state) do
+    MIDI.note_off(connection, Range.to_list(0..127), channel)
+    PubSub.broadcast(Seqex.PubSub, topic(self()), :stop)
+    {:noreply, Map.put(state, :playing?, false)}
   end
 
   # If the sequencer is already stopped and it gets another MIDI Stop message, reset the clock count and step.
