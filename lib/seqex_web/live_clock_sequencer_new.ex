@@ -113,7 +113,7 @@ defmodule SeqexWeb.LiveClockSequencerNew do
   def handle_info({:note_length, length}, socket), do: {:noreply, assign(socket, :note_length, length)}
   def handle_info(:start, socket), do: {:noreply, assign(socket, :playing?, true)}
   def handle_info(:continue, socket), do: {:noreply, assign(socket, :playing?, true)}
-  def handle_info(:stop, socket), do: {:noreply, assign(socket, :playing?, false)}
+  def handle_info(:stop, socket), do: {:noreply, socket |> assign(:playing?, false) |> assign(:step, 1)}
 
   # Handlers for `phx-click` events.
   def handle_event("update-bpm", %{"bpm" => bpm}, socket) do
