@@ -39,7 +39,7 @@
         <!-- Octave, Play and Pause Buttons -->
         <div class="grid grid-cols-8 gap-1 md:gap-2">
           <div
-            class="col-span-5 bg-neutral-950 rounded-md p-4 text-white text-xl flex items-center h-10 md:h-14 lg:h-20"
+            class="col-span-6 bg-neutral-950 rounded-md p-4 text-white text-xl flex items-center h-10 md:h-14 lg:h-20"
             style="font-family: Geist Mono"
           >
             <%= @display %>
@@ -50,21 +50,27 @@
           >
             <Icons.question_mark_circle />
           </button>
-          <button
-            class={
-              pad_color(@channel, true) <>
-              " flex items-center justify-center text-white p-2 md:p-4 rounded-md opacity-100"
-            }
-            phx-click="play"
-          >
-            <Icons.play />
-          </button>
-          <button
-            class="flex items-center justify-center bg-neutral-950 text-white p-2 md:p-4 rounded-md"
-            phx-click="stop"
-          >
-            <Icons.pause />
-          </button>
+          <%= if !@playing? do %>
+            <button
+              class={
+                pad_color(@channel, true) <>
+                " flex items-center justify-center text-white p-2 md:p-4 rounded-md opacity-100"
+              }
+              phx-click="play"
+            >
+              <Icons.play />
+            </button>
+          <% else %>
+            <button
+              class={
+                pad_color(@channel, true) <>
+                " flex items-center justify-center text-white p-2 md:p-4 rounded-md"
+              }
+              phx-click="stop"
+            >
+              <Icons.pause />
+            </button>
+          <% end %>
           <!-- Octave Buttons -->
           <div class="grid grid-cols-2 items-center justify-items-center col-span-2 bg-neutral-950 rounded-md h:10 md:h-14 lg:h-20">
             <button class="text-white p-2 md:p-4 rounded-md" phx-click="update-octave" phx-value-octave={@octave + 1}>

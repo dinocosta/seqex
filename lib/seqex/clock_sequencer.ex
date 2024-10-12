@@ -269,12 +269,16 @@ defmodule Seqex.ClockSequencer do
     |> Map.put(:clock_count, 0)
     |> Map.put(:step, 0)
     |> Map.put(:playing?, true)
+    |> tap(fn _ -> PubSub.broadcast(Seqex.PubSub, topic(self()), :start) end)
     |> then(fn state -> {:noreply, state} end)
   end
 
   # When the sequencer receives a MIDI Continue message it means it can continue the sequence from where it stopped,
   # which in this implementation basically means setting the sequencer's `:playing?` value to `true`.
-  def handle_cast(@continue_message, state), do: {:noreply, Map.put(state, :playing?, true)}
+  def handle_cast(@continue_message, state) do
+    PubSub.broadcast(Seqex.PubSub, topic(self()), :continue)
+    {:noreply, Map.put(state, :playing?, true)}
+  end
 
   # Stops the sequencer. In order to make sure no note is left hanging this will send a `note_off` message to all of
   # the possible note values in the MIDI specification. This should probably be updated to actually save the current
@@ -284,6 +288,7 @@ defmodule Seqex.ClockSequencer do
   def handle_cast(@stop_message, %{connection: connection, playing?: true} = state) do
     0..127
     |> Enum.each(fn note -> MIDI.note_off(connection, note) end)
+    |> tap(fn _ -> PubSub.broadcast(Seqex.PubSub, topic(self()), :stop) end)
     |> then(fn _ -> {:noreply, Map.put(state, :playing?, false)} end)
   end
 
@@ -294,6 +299,7 @@ defmodule Seqex.ClockSequencer do
     state
     |> Map.put(:step, 0)
     |> Map.put(:clock_count, 0)
+    |> tap(fn _ -> PubSub.broadcast(Seqex.PubSub, topic(self()), :stop) end)
     |> then(fn state -> {:noreply, state} end)
   end
 

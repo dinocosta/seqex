@@ -86,9 +86,14 @@ defmodule SeqexWeb.Client do
   end
 
   # Handlers for the PubSub broadcast messages.
+  # For the case of the start, continue and stop messages the client does not need to do anything, as it has
+  # no UI elements that depend on these values.
   def handle_info({:sequence, sequence}, socket), do: {:noreply, assign(socket, :sequence, sequence)}
   def handle_info({:step, step}, socket), do: {:noreply, assign(socket, :step, step + 1)}
   def handle_info({:channel, channel}, socket), do: {:noreply, assign(socket, :channel, channel)}
+  def handle_info(:start, socket), do: {:noreply, socket}
+  def handle_info(:continue, socket), do: {:noreply, socket}
+  def handle_info(:stop, socket), do: {:noreply, socket}
 
   def handle_event("update-note", %{"index" => index, "note" => note}, %{assigns: assigns} = socket) do
     index = String.to_integer(index)

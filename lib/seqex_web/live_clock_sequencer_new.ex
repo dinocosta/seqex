@@ -94,6 +94,7 @@ defmodule SeqexWeb.LiveClockSequencerNew do
       |> assign(:channel, 0)
       |> assign(:display, "SeqEx")
       |> assign(:qr_code, qr_code)
+      |> assign(:playing?, ClockSequencer.playing?(sequencer))
       |> tap(fn _socket ->
         # Subscribe to the topic related to the sequencer, so that we can both broadcast updates as well as receive
         # messages related to the changes in the sequencer's state.
@@ -110,6 +111,9 @@ defmodule SeqexWeb.LiveClockSequencerNew do
   def handle_info({:sequence, sequence}, socket), do: {:noreply, assign(socket, :sequence, sequence)}
   def handle_info({:step, step}, socket), do: {:noreply, assign(socket, :step, step + 1)}
   def handle_info({:note_length, length}, socket), do: {:noreply, assign(socket, :note_length, length)}
+  def handle_info(:start, socket), do: {:noreply, assign(socket, :playing?, true)}
+  def handle_info(:continue, socket), do: {:noreply, assign(socket, :playing?, true)}
+  def handle_info(:stop, socket), do: {:noreply, assign(socket, :playing?, false)}
 
   # Handlers for `phx-click` events.
   def handle_event("update-bpm", %{"bpm" => bpm}, socket) do
