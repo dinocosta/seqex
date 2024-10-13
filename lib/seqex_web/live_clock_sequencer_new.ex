@@ -234,6 +234,14 @@ defmodule SeqexWeb.LiveClockSequencerNew do
     |> then(fn socket -> {:noreply, socket} end)
   end
 
+  # Removes all notes from the sequence, while keeping the same sequence length.
+  def handle_event("clear", _unsigned_params, %{assigns: assigns} = socket) do
+    assigns.sequence
+    |> Enum.map(fn _ -> [] end)
+    |> tap(fn sequence -> ClockSequencer.update_sequence(assigns.sequencer, sequence, self()) end)
+    |> then(fn sequence -> {:noreply, assign(socket, :sequence, sequence)} end)
+  end
+
   def handle_event("keydown", %{"key" => key}, socket) do
     if key == " " do
       if ClockSequencer.playing?(socket.assigns.sequencer) do

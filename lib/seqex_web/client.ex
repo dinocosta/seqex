@@ -91,6 +91,7 @@ defmodule SeqexWeb.Client do
   def handle_info({:sequence, sequence}, socket), do: {:noreply, assign(socket, :sequence, sequence)}
   def handle_info({:step, step}, socket), do: {:noreply, assign(socket, :step, step + 1)}
   def handle_info({:channel, channel}, socket), do: {:noreply, assign(socket, :channel, channel)}
+  def handle_info({:note_length, _}, socket), do: {:noreply, socket}
   def handle_info(:start, socket), do: {:noreply, socket}
   def handle_info(:continue, socket), do: {:noreply, socket}
   def handle_info(:stop, socket), do: {:noreply, socket}
