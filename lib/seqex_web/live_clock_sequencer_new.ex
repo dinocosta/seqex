@@ -9,7 +9,7 @@ defmodule SeqexWeb.LiveClockSequencerNew do
   alias Seqex.MIDI
 
   @default_bpm 120
-  @default_sequence [[:C4], [], [:E4], [], [:G4], [], [:B4], []]
+  @default_sequence [[], [], [], [], [], [], [], []]
   @max_octave_value 5
   @min_octave_value 1
 
@@ -90,7 +90,7 @@ defmodule SeqexWeb.LiveClockSequencerNew do
       |> assign(:sequence, ClockSequencer.sequence(sequencer))
       |> assign(:note_length, ClockSequencer.note_length(sequencer))
       |> assign(:step, ClockSequencer.step(sequencer) + 1)
-      |> assign(:octave, 4)
+      |> assign(:octave, 2)
       |> assign(:channel, 0)
       |> assign(:display, "SeqEx")
       |> assign(:qr_code, qr_code)

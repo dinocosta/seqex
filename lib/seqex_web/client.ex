@@ -70,7 +70,7 @@ defmodule SeqexWeb.Client do
       |> assign(:sequencer, sequencer)
       |> assign(:sequence, ClockSequencer.sequence(sequencer))
       |> assign(:step, ClockSequencer.step(sequencer) + 1)
-      |> assign(:octave, 4)
+      |> assign(:octave, 2)
       |> assign(:channel, ClockSequencer.channel(sequencer))
       |> assign(:display, "SeqEx")
       |> assign(:loading, false)
